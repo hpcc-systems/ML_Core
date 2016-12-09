@@ -28,20 +28,27 @@ EXPORT Types := MODULE
   EXPORT t_Count := t_RecordID; // Possible to count every record
   EXPORT t_Work_Item := UNSIGNED2;  //TODO: change to be Std.PBblas.Types.work_item_t
 
-  EXPORT NumericField := RECORD
+  EXPORT AnyField     := RECORD
     t_Work_Item wi;
     t_RecordID id;
-    t_FieldNumber number;
-    t_FieldReal value;
+  	t_FieldNumber number;
+  END;
+  
+  EXPORT NumericField := RECORD(AnyField)
+  	t_FieldReal value;
   END;
 
-  EXPORT DiscreteField := RECORD
+  EXPORT DiscreteField := RECORD(AnyField)
+  	t_Discrete value;
+  END;
+
+  EXPORT Layout_Model := RECORD
     t_Work_Item wi;
-    t_RecordID id;
-    t_FieldNumber number;
-    t_Discrete value;
+    t_RecordID  id;  // Identifies the component type within the model
+    t_FieldNumber number; // Corresponds to field number of the original data
+    t_FieldReal value;  // The model parameter value
   END;
-
+  
   EXPORT l_result := RECORD(DiscreteField)
     REAL8 conf;  // Confidence - high is good
   END;
