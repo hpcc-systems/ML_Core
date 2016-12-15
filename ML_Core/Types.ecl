@@ -26,7 +26,7 @@ EXPORT Types := MODULE
   EXPORT t_Discrete := INTEGER4;
   EXPORT t_Item := UNSIGNED4; // Currently allows up to 4B different elements
   EXPORT t_Count := t_RecordID; // Possible to count every record
-  EXPORT t_Work_Item := UNSIGNED2;  //TODO: change to be Std.PBblas.Types.work_item_t
+  EXPORT t_Work_Item := UNSIGNED2;  //TODO: change to be PBblas.Types.work_item_t
 
   // Base record for Numeric and Discrete Fields
   EXPORT AnyField     := RECORD
