@@ -1,4 +1,4 @@
-﻿// Core types defined
+// Core types defined
 EXPORT Types := MODULE
 // The t_RecordID and t_FieldNumber are native nominal types of the ML
 // libraries and they currently allow for 2**64 rows with 2**32
@@ -9,7 +9,7 @@ EXPORT Types := MODULE
 // supports 2**32 (more than 4 billion) rows and an unsigned2 for
 // t_FieldNumber allows 64K features.
 //
-// Some ML modules will use dense matrix operations form Std.PBblas and
+// Some ML modules will use dense matrix operations form PBblas and
 // support only 4 billion (2**32) rows.
 //
 // The structures are also used for the myriad interface support.
@@ -26,22 +26,34 @@ EXPORT Types := MODULE
   EXPORT t_Discrete := INTEGER4;
   EXPORT t_Item := UNSIGNED4; // Currently allows up to 4B different elements
   EXPORT t_Count := t_RecordID; // Possible to count every record
-  EXPORT t_Work_Item := UNSIGNED2;  //TODO: change to be Std.PBblas.Types.work_item_t
+  EXPORT t_Work_Item := UNSIGNED2;  //TODO: change to be PBblas.Types.work_item_t
 
-  EXPORT NumericField := RECORD
-    t_Work_Item wi;
-    t_RecordID id;
-    t_FieldNumber number;
-    t_FieldReal value;
+  // Base record for Numeric and Discrete Fields
+  EXPORT AnyField     := RECORD
+    t_Work_Item wi; // Work-item id
+    t_RecordID id;  // Observation identifier (i.e. row id for X and Y) -- 1 based
+  	t_FieldNumber number; // Feature number (i.e. column number) -- 1 based
+  END;
+  
+  // Numeric Field -- used to hold REAL values
+  EXPORT NumericField := RECORD(AnyField)
+  	t_FieldReal value;
+  END;
+  
+  // DiscreteField -- used to hold INTEGER values
+  EXPORT DiscreteField := RECORD(AnyField)
+  	t_Discrete value;
   END;
 
-  EXPORT DiscreteField := RECORD
-    t_Work_Item wi;
-    t_RecordID id;
-    t_FieldNumber number;
-    t_Discrete value;
+  // Generic Layout describing the model 'learned' by a Machine Learning algorithm.
+  // Specific algorithms may augment this layout to add fields.
+  EXPORT Layout_Model := RECORD
+    t_Work_Item wi;       // Work-item of the model
+    t_RecordID  id;       // Identifies the component type within the model
+    t_FieldNumber number; // Corresponds to field number of the original data
+    t_FieldReal value;    // The model parameter value
   END;
-
+  
   EXPORT l_result := RECORD(DiscreteField)
     REAL8 conf;  // Confidence - high is good
   END;
