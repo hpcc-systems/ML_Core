@@ -5,6 +5,9 @@ IMPORT Std.System.ThorLib;
 
 EXPORT FieldAggregates(DATASET(Types.NumericField) d) := MODULE
   // Simple statistics
+  // Distribute fields by work-item so that we can perform the table l operation
+  // locally for each independent work-item.
+  d_dist := DISTRIBUTE(d, wi);
   SingleField := RECORD
     d.wi;
     d.number;
@@ -16,7 +19,7 @@ EXPORT FieldAggregates(DATASET(Types.NumericField) d) := MODULE
     Types.t_fieldreal var     :=VARIANCE(GROUP,d.Value);
     Types.t_fieldreal sd      :=SQRT(VARIANCE(GROUP,d.Value));
   END;
-  EXPORT Simple:=TABLE(d,SingleField, wi, Number,FEW);
+  EXPORT Simple:=TABLE(d_dist, SingleField, wi, Number, FEW, LOCAL);
   // Simple Ranked
   RankableField := RECORD
     d;
