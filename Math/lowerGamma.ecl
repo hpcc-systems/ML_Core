@@ -31,7 +31,7 @@ EXPORT REAL8 lowerGamma(REAL8 x, REAL8 y) := BEGINC++
     for (k=100;k>=1;k--) {
       t = (k-x)/(1.0+(k/(y+t)));
     }
-    ga = exp(gamma(x));
+    ga = tgamma(x);
     gin = ga-(exp(n)/(y+t));
   }
   return gin;

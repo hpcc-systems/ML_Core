@@ -13,7 +13,7 @@ EXPORT REAL8 upperGamma(REAL8 x, REAL8 y) := BEGINC++
   if ((x < 0.0) || (y < 0)) return 0;
   n = -y+x*log(y);
   if (y == 0.0) {
-    gim = exp(gamma(x));
+    gim = tgamma(x);
     return gim;
   }
   if (y <= 1.0+x) {
@@ -24,7 +24,7 @@ EXPORT REAL8 upperGamma(REAL8 x, REAL8 y) := BEGINC++
       s += r;
       if (fabs(r/s) < 1e-15) break;
     }
-  ga = exp(gamma(x));
+  ga = tgamma(x);
   gim = ga-(exp(n)*s);
   }
   else {
