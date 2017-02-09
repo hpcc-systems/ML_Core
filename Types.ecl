@@ -32,17 +32,17 @@ EXPORT Types := MODULE
   EXPORT AnyField     := RECORD
     t_Work_Item wi; // Work-item id
     t_RecordID id;  // Observation identifier (i.e. row id for X and Y) -- 1 based
-  	t_FieldNumber number; // Feature number (i.e. column number) -- 1 based
+    t_FieldNumber number; // Feature number (i.e. column number) -- 1 based
   END;
-  
+
   // Numeric Field -- used to hold REAL values
   EXPORT NumericField := RECORD(AnyField)
-  	t_FieldReal value;
+    t_FieldReal value;
   END;
-  
+
   // DiscreteField -- used to hold INTEGER values
   EXPORT DiscreteField := RECORD(AnyField)
-  	t_Discrete value;
+    t_Discrete value;
   END;
 
   // Generic Layout describing the model 'learned' by a Machine Learning algorithm.
@@ -53,7 +53,7 @@ EXPORT Types := MODULE
     t_FieldNumber number; // Corresponds to field number of the original data
     t_FieldReal value;    // The model parameter value
   END;
-  
+
   EXPORT l_result := RECORD(DiscreteField)
     REAL8 conf;  // Confidence - high is good
   END;
