@@ -46,18 +46,29 @@ EXPORT Types := MODULE
   END;
 
   // Generic Layout describing the model 'learned' by a Machine Learning algorithm.
-  // Specific algorithms may augment this layout to add fields.
   EXPORT Layout_Model := RECORD
     t_Work_Item wi;       // Work-item of the model
     t_RecordID  id;       // Identifies the component type within the model
-    t_FieldNumber number; // Corresponds to field number of the original data
+    t_FieldNumber number; // meaning varies by ID
     t_FieldReal value;    // The model parameter value
   END;
 
-  EXPORT l_result := RECORD(DiscreteField)
+  // Classification definitions
+  EXPORT Classify_Result := RECORD(DiscreteField)
     REAL8 conf;  // Confidence - high is good
   END;
+  EXPORT l_result := Classify_Result : DEPRECATED('Use Classify_Result');
 
+  EXPORT Confusion_Detail := RECORD
+    t_work_item wi;
+    t_FieldNumber classifier;   // Dependent column identifier
+    t_Discrete actual_class;
+    t_Discrete predict_class;
+    UNSIGNED4 occurs;
+    BOOLEAN correct;
+  END;
+
+  // generic items, used in association mining
   EXPORT ItemElement := RECORD
     t_Work_Item wi;
     t_Item value;
