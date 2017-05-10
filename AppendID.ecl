@@ -13,6 +13,7 @@
 //    ML.AppendID(dOrig, recID, dOrigWithId);
 //---------------------------------------------------------------------------
 EXPORT AppendID(dIn,idfield,dOut) := MACRO
+  IMPORT Std.System.ThorLib;
   #uniquename(dInPrep)
   %dInPrep%:=TABLE(dIn,{ML_Core.Types.t_RecordID idfield:=0;dIn;});
   #uniquename(tra)

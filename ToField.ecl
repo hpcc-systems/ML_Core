@@ -98,7 +98,7 @@ EXPORT ToField(dIn,dOut,idfield='', wifield='', wivalue='',datafields=''):=MACRO
   #APPEND(tonumber,'0);')
   #EXPAND(%'tonumber'%)
   // Produce the output, with one row for every id/axis combination.
-  dOut:=NORMALIZE(dIn,%iNumberOfFields%,TRANSFORM(Types.NumericField,
+  dOut:=NORMALIZE(dIn,%iNumberOfFields%,TRANSFORM(ML_Core.Types.NumericField,
                   SELF.wi:=#EXPAND(%'use_for_wi'%),
                   SELF.id:=LEFT.#EXPAND(%'foundidfield'%),
                   SELF.number:=COUNTER,
