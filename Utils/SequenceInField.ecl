@@ -14,6 +14,7 @@
  *@return a file of the same type with sequence numbers applied
  */
 EXPORT SequenceInField(infile,infield,seq,wi_name='wi') := FUNCTIONMACRO
+  IMPORT Std.System.ThorLib;
   LOCAL extend_rec := RECORD(RECORDOF(infile))
     UNSIGNED2 __node;
   END;
