@@ -38,6 +38,7 @@
 //    dMatrix_Map; // returns the mapping table of field name to number
 //---------------------------------------------------------------------------
 EXPORT ToField(dIn,dOut,idfield='', wifield='', wivalue='',datafields=''):=MACRO
+  IMPORT ML_Core;
   LOADXML('<xml/>');
   // Variable to contain the name if the field that maps to "wi", or the value
   #DECLARE(use_for_wi);
@@ -79,7 +80,7 @@ EXPORT ToField(dIn,dOut,idfield='', wifield='', wivalue='',datafields=''):=MACRO
           #APPEND(mapping,',{\''+%'{@label}'%+'\',\'WI\'}')
         #ELSE
           #IF(REGEXREPLACE('[^a-z]',%'{@type}'%,'') IN ['unsigned','integer','real','decimal','udecimal'] #IF(#TEXT(datafields)!='') AND REGEXFIND('\\s*,\\s*'+%'{@label}'%+',',','+datafields+',',NOCASE) #END)
-            #APPEND(normlist,',(Types.t_FieldReal)LEFT.'+%'{@label}'%)
+            #APPEND(normlist,',(ML_Core.Types.t_FieldReal)LEFT.'+%'{@label}'%)
             #SET(iNumberOfFields,%iNumberOfFields%+1)
             #APPEND(mapping,',{\''+%'{@label}'%+'\',\''+%'iNumberOfFields'%+'\'}')
             #APPEND(toname,'i='+%'iNumberOfFields'%+'=>\''+%'{@label}'%+'\',')
