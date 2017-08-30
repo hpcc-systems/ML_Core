@@ -83,4 +83,11 @@ EXPORT Types := MODULE
     t_node  node_id;
     t_level level;
   END;
+
+  // Data diagnostic definition
+  EXPORT Data_Diagnostic := RECORD
+    t_work_item wi;
+    BOOLEAN valid;                 // Flag indicating failure of ANY diagnostic tests for wi
+    SET OF VARSTRING message_text; // List of failed diagnostic tests for a wi
+  END;
 END;
