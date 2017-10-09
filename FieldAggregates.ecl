@@ -1,4 +1,4 @@
-IMPORT $ AS ML_Core;
+﻿IMPORT $ AS ML_Core;
 IMPORT ML_Core.Types AS Types;
 IMPORT ML_Core.Utils AS Utils;
 IMPORT Std.System.ThorLib;
@@ -106,7 +106,7 @@ EXPORT FieldAggregates(DATASET(Types.NumericField) d) := MODULE
   EXPORT Cardinality:=TABLE(T,{wi, number;
                         UNSIGNED cardinality:=COUNT(GROUP);},wi, number);
   // Ranked
-  AveRanked := RECORD
+  SHARED AveRanked := RECORD
     d;
     Types.t_FieldReal Pos;
   END;
@@ -135,5 +135,143 @@ EXPORT FieldAggregates(DATASET(Types.NumericField) d) := MODULE
                        Types.t_fieldreal Max:=MAX(GROUP,value);
                        UNSIGNED cnt:=COUNT(GROUP);},
                       wi, number, ntile);
+  // N-Histogram
+  {RECORDOF(d);Types.t_Discrete hbin;}
+  tHistBin(RECORDOF(d) L,Simple R,Types.t_Discrete n):=TRANSFORM
+    SELF.hbin := IF(L.value = R.maxval, n,
+                    (Types.t_Discrete) n*(L.value - R.minval)/(R.maxval - R.minval)+1);
+    SELF:=L;
+  END;
+  EXPORT HistBins(Types.t_Discrete n):=JOIN(d, Simple,
+                                LEFT.wi=RIGHT.wi
+                                AND LEFT.number=RIGHT.number,
+                                tHistBin(LEFT,RIGHT,n),LOOKUP);
+  EXPORT HistBinRanges(Types.t_Discrete n):=TABLE(HistBins(n),
+                    {wi;number;hbin;
+                     Types.t_fieldreal Min:=MIN(GROUP,value);
+                     Types.t_fieldreal Max:=MAX(GROUP,value);
+                     UNSIGNED cnt:=COUNT(GROUP);},
+                    wi, number, hbin);
+  // Pearson product-moment correlation matrix
+  SHARED dChildRec := RECORD
+    d.id;
+    d.value;
+    Types.t_FieldReal Pos;
+  END;
+  SHARED dDenormRec := RECORD
+    d.wi;
+    d.number;
+    DATASET(dChildRec) d := DATASET([], dChildRec);
+  END;
+  dParent := PROJECT(Simple, dDenormRec);
+  dDenormRec tDenorm(dParent L, AveRanked R) := TRANSFORM
+    SELF.d := L.d + PROJECT(DATASET(R),dChildRec);
+    SELF := L;
+  END;
+  SHARED dDenorm := DENORMALIZE(dParent, RankedInput,
+                         LEFT.wi = RIGHT.wi
+                         AND LEFT.number = RIGHT.number,
+                         tDenorm(LEFT,RIGHT));
+  SHARED combineRec := RECORD(dChildRec)
+    Types.t_fieldreal value2;
+  END;
+  SHARED corrRec := RECORD
+    d.wi;
+    Types.t_Discrete number1;
+    Types.t_Discrete number2;
+    Types.t_fieldreal Correl;
+  END;
+  corrRec tPearson(dDenormRec L, dDenormRec R) := TRANSFORM
+    SELF.number1 := L.number;
+    SELF.number2 := R.number;
+    LRd := JOIN(L.d,R.d,LEFT.id = RIGHT.id,
+               TRANSFORM(combineRec,
+                         SELF.value2 := RIGHT.value,
+                         SELF := LEFT));
+    SELF.Correl := CORRELATION(LRd, value, value2);
+    SELF := L;
+  END;
+  EXPORT PearsonCorr := JOIN(dDenorm, dDenorm,
+                  LEFT.wi=RIGHT.wi AND LEFT.number <= RIGHT.number,
+                  tPearson(LEFT,RIGHT));
+  // Spearman's rho correlation matrix
+  corrRec tSpearman(dDenormRec L, dDenormRec R) := TRANSFORM
+    SELF.number1 := L.number;
+    SELF.number2 := R.number;
+    LRd := JOIN(L.d,R.d,LEFT.id = RIGHT.id,
+               TRANSFORM(combineRec,
+                         SELF.value := LEFT.pos,
+                         SELF.value2 := RIGHT.pos,
+                         SELF := LEFT));
+    SELF.Correl := CORRELATION(LRd, value, value2);
+    SELF := L;
+  END;
+  EXPORT SpearmanCorr := JOIN(dDenorm, dDenorm,
+                  LEFT.wi=RIGHT.wi AND LEFT.number <= RIGHT.number,
+                  tSpearman(LEFT,RIGHT));
+  // Kendall's tau-b correlation matrix
+  KendallCompRec := RECORD
+    UNSIGNED2 Concordant;
+    UNSIGNED2 Discordant;
+  END;
+  KendallTiesRec := RECORD
+    n_t := COUNT(GROUP) * (COUNT(GROUP) - 1) / 2;
+  END;
+  KendallCompRec KendallComp(combineRec L, combineRec R) := TRANSFORM
+    SELF.Concordant := IF((L.value < R.value AND L.value2 < R.value2) OR
+                          (L.value > R.value AND L.value2 > R.value2),
+                          1, 0);
+    SELF.Discordant := IF((L.value < R.value AND L.value2 > R.value2) OR
+                          (L.value > R.value AND L.value2 < R.value2),
+                          1, 0);
+  END;
+  REAL8 Kendall(DATASET(combineRec) LRd) := FUNCTION
+    components := JOIN(LRd, LRd, LEFT.id <> RIGHT.id AND LEFT.id < RIGHT.id, KendallComp(LEFT,RIGHT), ALL);
+    n_t_L := SUM(TABLE(LRd, KendallTiesRec, value ), n_t);
+    n_t_R := SUM(TABLE(LRd, KendallTiesRec, value2), n_t);
+    n_c := SUM(components, Concordant);
+    n_d := SUM(components, Discordant);
+    n := COUNT(components);
+    tau := (n_c - n_d) / SQRT((n - n_t_L) * (n - n_t_R));
+    return(tau);
+  END;
+  corrRec tKendall(dDenormRec L, dDenormRec R) := TRANSFORM
+    SELF.number1 := L.number;
+    SELF.number2 := R.number;
+    LRd := JOIN(L.d,R.d,LEFT.id = RIGHT.id,
+               TRANSFORM(combineRec,
+                         SELF.value := LEFT.pos,
+                         SELF.value2 := RIGHT.pos,
+                         SELF := LEFT));
+    SELF.Correl := Kendall(LRd);
+    SELF := L;
+  END;
+  EXPORT KendallCorr := JOIN(dDenorm, dDenorm,
+                  LEFT.wi=RIGHT.wi AND LEFT.number <= RIGHT.number,
+                  tKendall(LEFT,RIGHT));
+  // Generalized Spearman rho correlation matrix (each independent vs dependent)
+  // See the R package 'Hmisc' by Frank Harrell (and the function 'biVar').
+  corrRec tGenSpearman2(dDenormRec L, dDenormRec R) := TRANSFORM
+    SELF.number1 := L.number;
+    SELF.number2 := R.number;
+    LRd := JOIN(L.d,R.d,LEFT.id = RIGHT.id,
+               TRANSFORM(combineRec,
+                         SELF.value := LEFT.pos,
+                         SELF.value2 := RIGHT.pos,
+                         SELF := LEFT));
+    unique := COUNT(TABLE(LRd, {value2}, value2));
+    XYSpearman := CORRELATION(LRd, value, value2);
+    XSqYSpearman := CORRELATION(LRd, value, POWER(value2,2));
+    XXSqSpearman := CORRELATION(LRd, value2, POWER(value2,2));
+    SELF.Correl := IF(unique < 3,
+      POWER(XYSpearman, 2),
+      (POWER(XYSpearman,2) - 2 * XYSpearman * XSqYSpearman * XXSqSpearman + POWER(XSqYSpearman,2))
+        / (1 - POWER(XXSqSpearman,2))
+    );
+    SELF := L;
+  END;
+  EXPORT GenSpearman2Corr(dep = 1) := JOIN(dDenorm, dDenorm,
+                  LEFT.wi=RIGHT.wi AND LEFT.number = dep AND RIGHT.number <> dep,
+                  tGenSpearman2(LEFT,RIGHT));
   // End Field Aggregates
 END;
