@@ -1,43 +1,48 @@
-//IMPORT $.Types AS Types;
-//---------------------------------------------------------------------------
-// Macro takes a matrix dataset, with each row contianing an ID and one or
-// more axis fields containing numeric values, and expands it into the
-// NumericField format used by ML.
-//
-//   dIn       : The name of the input dataset
-//   dOut      : The name of the resulting dataset
-//   idfield   : [OPTIONAL] The name of the field that contains the UID for
-//               each row.  If omitted, it is assumed to be the first field.
-//   wifield   : [OPTIOPNAL] The name of the field that contains the
-//               work item value.  A constant is used if the field name
-//               is not supplied.
-//   wivalue   : [OPTIONAL} The constant value to use for work item.
-//               The value 1 is used if not supplied.
-//   datafields: [OPTIONAL] A STRING contianing a comma-delimited list of the
-//               fields to be treated as axes.  If omitted, all numeric
-//               fields that are not the UID will be treated as axes.
-//               NOTE: idfield defaults to the first field in the table, so
-//               if that field is specified as an axis field, then the user
-//               should be sure to specify a value in the idfield param.
-//
-//  Along with creating the NumericField table, this macro produces two
-//  simple functions to assist the user in mapping the field names to their
-//  corresponding numbers.  These are "STRING dOut_ToName(UNSIGNED)" and
-//  "UNSIGNED dOut_ToNumber(STRING)", where the "dOut" portion of the function
-//  name is the name passed into that parameter of the macro.
-//
-//  The macro also produces a mapping table named "dOut_Map", again where
-//  "dOut" refers to the parameter, that contains a table of the field
-//  mappings
-//
-//  Examples:
-//    ML.ToField(dOrig,dMatrix);
-//    ML.ToField(dOrig,dMatrix,myid,'field5,field7,field10');
-//    dMatrix_ToName(2);  // returns 'field7'
-//    dMatrix_ToNumber('field10'); // returns 3
-//    dMatrix_Map; // returns the mapping table of field name to number
-//---------------------------------------------------------------------------
-EXPORT ToField(dIn,dOut,idfield='', wifield='', wivalue='',datafields=''):=MACRO
+/*##############################################################################
+## HPCC SYSTEMS software Copyright (C) 2018 HPCC Systems®.  All rights reserved.
+############################################################################## */
+/** 
+  * ToField Macro takes a matrix dataset, with each row containing an ID and one or
+  * more axis fields containing numeric values, and expands it into the
+  * NumericField format used by ML.
+  *
+  * @param dIn The name of the input dataset
+  * @param dOut The name of the resulting dataset
+  * @param idfield [OPTIONAL] The name of the field that contains the UID for
+  *                each row.  If omitted, it is assumed to be the first field.
+  * @param wifield [OPTIONAL] The name of the field that contains the
+  *                work item value.  A constant is used if the field name
+  *                is not supplied (as provided by wivalue below)
+  * @param wivalue [OPTIONAL} The constant value to use for work item.
+  *                The value 1 is used if not supplied.
+  * @param datafields [OPTIONAL] A STRING containing a comma-delimited list of the
+  *                   fields to be treated as axes.  If omitted, all numeric
+  *                   fields that are not the idfield or wifield will be treated as axes.
+  *                   NOTE: idfield defaults to the first field in the table, so
+  *                   if that field is specified as an axis field, then the user
+  *                   should be sure to specify a value in the idfield param.
+  * @return Nothing.  The MACRO creates new attributes in-line as described below.
+  *
+  * Along with creating the NumericField table, this macro produces two
+  * simple functions to assist the user in mapping the field names to their
+  * corresponding numbers.  These are "STRING dOut_ToName(UNSIGNED)" and
+  * "UNSIGNED dOut_ToNumber(STRING)", where the "dOut" portion of the function
+  * name is the name passed into that parameter of the macro.
+  *
+  * The macro also produces a mapping table named "dOut_Map", again where
+  * "dOut" refers to the parameter, that contains a table of the field
+  * mappings.  See Types.Field_Mapping for the layout of this mapping dataset.
+  *
+  * Examples:
+  *   ML.ToField(dOrig,dMatrix);
+  *   ML.ToField(dOrig,dMatrix,myid,'field5,field7,field10');
+  *   dMatrix_ToName(2);    // returns 'field7'
+  *   dMatrix_ToNumber('field10'); // returns 3
+  *   dMatrix_Map;  // returns the mapping table of field name to number see 
+  *                 // Types.Field_Mapping
+  *
+  */
+EXPORT ToField(dIn, dOut, idfield='', wifield='', wivalue='', datafields=''):=MACRO
   IMPORT ML_Core;
   LOADXML('<xml/>');
   // Variable to contain the name if the field that maps to "wi", or the value

@@ -1,7 +1,7 @@
 // Compare Beta against the scipy implementation of Beta for validation
 //We only expose the Beta at this point, but test is intended to be
 //expanded to add the incomplete (lower) Beta.
-IMPORT ML_Core;
+IMPORT $.^ AS ML_Core;
 IMPORT ML_Core.Math;
 IMPORT Python;
 REAL8 scipy_beta(REAL8 x, REAL8 y) := EMBED(Python)
