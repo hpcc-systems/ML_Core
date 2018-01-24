@@ -2,6 +2,11 @@ IMPORT $.^ AS ML_Core;
 IMPORT $.^.Types AS Types;
 
 /**
+  * ***DEPRECATED***
+  * Interface Definition for Classification Modules (version 1)
+  * This interface is being deprecated and should not be used for
+  * new bundles or bundles undergoing substantial revision.
+  * Please use IClassify2 going forward.
  * Interface definition for Classification.  Actual implementation
  * modules will probably take parameters.
  */
