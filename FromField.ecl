@@ -1,25 +1,46 @@
-//---------------------------------------------------------------------------
-// Macro to reconstitute an original matrix from a NumericField-formatted
-// dataset.  In the simplest case, the assumption is that the field order
-// of the resulting table is in line with the field numbers in the input
-// dataset, with the ID field as the first field.  If a field mapping is
-// specified, this order can be re-arranged.
-//   dIn  : The name of the input dataset in NumericField format
-//   lOut : The name of the resulting layout the data should be in
-//   dOut : The name of the resulting dataset
-//   dMap : [OPTIONAL] If the user customized the fields used in the ToField
-//          process, they should include the mapping table that was created
-//          automatically by ToField here so the fields map back properly.
-//          This will be named NF_map, where NF is the name of the
-//          NumericField table that was created by ToField.
-//  Examples (used to reconstitute the ToField examples):
-//    ML.FromField(dMatrix,lOrig,dResults);
-//    ML.FromField(dMatrix,lOrig,dResults,dOrigData_Map);
-//
-// IMPORTANT NOTE: If fields in lOut were disregarded by the ToField macro
-// during the creation of the NumericField table, those fields WILL NOT be
-// reconstituted by this macro.  They will be left blank or zero.
-//---------------------------------------------------------------------------
+/*##############################################################################
+## HPCC SYSTEMS software Copyright (C) 2018 HPCC Systems®.  All rights reserved.
+############################################################################## */
+/**
+  * Macro to convert a NumericField formatted dataset to a Record formatted
+  * dataset.  Typically used to return converted NumericField data back to
+  * its original layout.
+  * 
+  * In the simplest case, the assumption is that the field order of the
+  * resulting table is in line with the field number in the input
+  * dataset, with the ID field as the first field.
+  * For example:
+  *   myRec := RECORD
+  *     UNSIGNED recordId;
+  *     REAL height;
+  *     REAL weight;
+  *   END;
+  *   Value of NumericField records with field number = 1 would go to height.
+  *   Value of NumericField records with field number = 2 would go to weight.
+  *   The id field of the NumericField record would be mapped to the recordId
+  *   field of the result.
+  *
+  * If the field orders have been changed (e.g. by customizing the ToField
+  * process, a field-mapping should be specified (See dMap below).
+  *
+  * Usage Examples:
+  *  ML.FromField(myNFData, myRecordLayout, myRecordData);
+  *  // Datamap to reorder the weight and height fields in the example above
+  *  dataMap := DATASET([{'weight', '1'},
+                         {'height', '2'}], Types.Field_Mapping);
+  *  ML.FromField(nyNFData, myRecordLayout, myRecordData, dataMap);
+  *
+  * @param dIn The name of the input dataset in NumericField format
+  * @param lOut The name of the layout record defining the records of the
+  *             result dataset
+  * @param dOut The name of the result dataset
+  * @param dMap [OPTIONAL] A Field_Mapping dataset as produced by ToField
+  *             that describes the mapping between field name and field number.
+  *             The format of this map is defined by Types.Field_Mapping.
+  * @see Types.NumericField
+  * @see Types.Field_Mapping
+  * @see ToField
+  */
 EXPORT FromField(dIn,lOut,dOut,dMap=''):=MACRO
   LOADXML('<xml/>');
   // If a mapping table was specified, we need to join it to the input data

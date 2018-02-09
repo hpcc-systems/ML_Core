@@ -16,7 +16,11 @@ null_model := DATASET([], Layout_Model);
 empty_data := DATASET([], NumericField);
 
 /**
-  * Interface Definition for Regression Modules
+  * ***DEPRECATED***
+  * Interface Definition for Regression Modules (version 1)
+  * This interface is being deprecated and should not be used for
+  * new bundles or bundles undergoing substantial revision.
+  * Please use IRegression2 going forward.
   *
   * Regression learns a function that maps a set of input data
   * to one or more output variables.  The resulting learned function is

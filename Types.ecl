@@ -1,4 +1,14 @@
-// Core types defined
+/*##############################################################################
+## HPCC SYSTEMS software Copyright (C) 2018 HPCC Systems®.  All rights reserved.
+############################################################################## */
+//IMPORT $ AS ML_Core;
+//NamingTree := ML_Core.NamingTree;
+
+/**
+  * This module provides the major data type definitions for use with the various
+  * ML Bundles
+  *
+  */
 EXPORT Types := MODULE
 // The t_RecordID and t_FieldNumber are native nominal types of the ML
 // libraries and they currently allow for 2**64 rows with 2**32
@@ -17,7 +27,7 @@ EXPORT Types := MODULE
 // steps applied.  Sort of a logical Single Instruction Multiple Data
 // parallel machine approach.  The work_item is used to group the
 // problem data.  If you have just one problem, the field should be
-// set to some constant like 0 or 1.
+// set to some positive constant like 1.
 //
   EXPORT t_RecordID := UNSIGNED8;
   EXPORT t_FieldNumber := UNSIGNED4;
@@ -27,6 +37,8 @@ EXPORT Types := MODULE
   EXPORT t_Item := UNSIGNED4; // Currently allows up to 4B different elements
   EXPORT t_Count := t_RecordID; // Possible to count every record
   EXPORT t_Work_Item := UNSIGNED2;  //TODO: change to be PBblas.Types.work_item_t
+  EXPORT t_index := UNSIGNED4;  // Type of each index value (see Layout_Model2)
+  EXPORT t_indexes := SET OF t_index; // Definition of the indexes field for Layout_Model2
 
   // Base record for Numeric and Discrete Fields
   EXPORT AnyField     := RECORD
@@ -35,16 +47,85 @@ EXPORT Types := MODULE
     t_FieldNumber number; // Feature number (i.e. column number) -- 1 based
   END;
 
-  // Numeric Field -- used to hold REAL values
+  /**
+    * The NumericField layout defines a matrix of Real valued data-points.
+    * It acts as the primary Dataset layout for interacting with most ML Functions.
+    * Each record represents a single cell in a matrix.  It is most often used
+    * to represent a set of data-samples or observations, with the 'id' field representing
+    * the data-sample or observation, and the 'number' field representing the 
+    * various fields within the observation.
+    *
+    * @field wi The work-item id, supporting the Myriad style interface.  This allows
+    *           multiple independent matrixes to be contained within a single dataset,
+    *           supporting independent ML activities to be processed in parallel.
+    * @field id This field represents the row-number of this cell of the matrix.  It
+    *           is also considered the record-id for observations / data-samples.
+    * @field number This field represents the matrix column number for this cell.  It
+    *               is also considered the field number of the observation
+    * @field value The value of this cell in the matrix.
+    *
+    */
   EXPORT NumericField := RECORD(AnyField)
     t_FieldReal value;
   END;
 
-  // DiscreteField -- used to hold INTEGER values
+  /**
+    * The Discrete Field layout defines a matrix of Integer valued data-points.
+    * It is similar to the NumericField layout above, except for only containing
+    * discrete (integer) values.
+    * It is typically used to convey the class-labels for classification algorithms.
+    *
+    * @field wi The work-item id, supporting the Myriad style interface.  This allows
+    *           multiple independent matrixes to be contained within a single dataset,
+    *           supporting independent ML activities to be processed in parallel.
+    * @field id This field represents the row-number of this cell of the matrix.  It
+    *           is also considered the record-id for observations / data-samples.
+    * @field number This field represents the matrix column number for this cell.  It
+    *               is also considered the field number of the observation
+    * @field value The value of this cell in the matrix.
+    *
+    */
   EXPORT DiscreteField := RECORD(AnyField)
     t_Discrete value;
   END;
 
+  /**
+    * Layout for Model dataset (version 2)
+    *
+    * Generic Layout describing the model 'learned' by a Machine Learning algorithm.
+    *
+    * Models for all new ML bundles are stored in this format.
+    * Some older bundles may still use the Layout_Model (version 1)
+    * layout.
+    *
+    * Models are thought of as opaque data structures.  They are
+    * not designed to be understandable except to the bundle that
+    * produced them.  Most bundles contain mechanisms to extract
+    * useful information from the model.
+    *
+    * This version of the model is based on a Naming-Tree paradigm.
+    * This provides a flexible generic mechanism for storage and
+    * manipulation of models.
+    *
+    * For bundle developers (or the curious), the file modelOps2
+    * provides a detailed description of
+    * the theory and usage of this model layout as well as a set of
+    * functions to manipulate models for use by bundle developers.
+    *
+    * @field wi The work-item-id
+    * @field value The value of the cell
+    * @field indexes The identifier for the cell -- a set of unsigned integers
+    *                e.g., [1,2,1,3]
+    */
+  EXPORT Layout_Model2 := RECORD
+    t_work_item wi;
+    t_fieldReal value;
+    t_indexes indexes;
+  END;
+
+  // Note: Layout_Model has been deprecated in favor of Layout_Model2, which
+  // should be used as the basis of the model for new Bundles or Bundles
+  // undergoing major revision.
   // Generic Layout describing the model 'learned' by a Machine Learning algorithm.
   EXPORT Layout_Model := RECORD
     t_Work_Item wi;       // Work-item of the model
@@ -53,12 +134,55 @@ EXPORT Types := MODULE
     t_FieldReal value;    // The model parameter value
   END;
 
+  // Generic Layout describing the model 'learned' by a Machine Learning algorithm.
+  // See NamingTree.ecl for details on using this format.
+  //EXPORT Layout_Model2 := NamingTree.ntNumeric;
+
   // Classification definitions
   EXPORT Classify_Result := RECORD(DiscreteField)
     REAL8 conf;  // Confidence - high is good
   END;
   EXPORT l_result := Classify_Result : DEPRECATED('Use Classify_Result');
 
+  // Result structures for the common analytic methods (see Analysis.ecl)
+  /**
+    * Class_Stats
+    *
+    * Layout for data returned from Analysis.Regression.ClassStats
+    *
+    * @field wi Work-item identifier
+    * @field classifier The field number associated with this dependent variable, for
+    *                   multi-variate classification.  Otherwise 1.
+    * @field class The class label associated with this record
+    * @field classCount The number of times the class was seen in the data
+    * @field classPct The percent of records with this class.
+    */
+  EXPORT Class_Stats := RECORD
+    t_Work_Item wi;
+    t_FieldNumber classifier; // Dependent column identifier for multi-variate
+    t_Discrete class;
+    t_Discrete classCount;
+    t_FieldReal classPct;
+  END;
+  /**
+    * Confusion_Detail
+    *
+    * Layout for storage of the confusion matrix for ML Classifiers
+    * Each row represents a pairing of a predicted class and an actual class
+    *
+    * @field wi Work item identifier
+    * @field classifier The field number associated with this dependent variable, for
+    *                   multi-variate.  Otherwise 1.
+    * @field actual_class The target class number -- the expected result.
+    * @field predict_class The class number predicted by the ML algorithm
+    * @field occurs The number of times this pairing of (actual / predicted) classes occurred
+    * @field correct Boolean indicating if this represents a correct prediction (i.e.
+    *                predicted = actual)
+    * @field pctActual The percent of items that were actually of <actual_class> that
+    *                  were predicted as <predict_class>.
+    * @field pctPred Indicates the percent of items that were predicted as <predict_class>
+    *                that were actually of <actual_class>.
+    */
   EXPORT Confusion_Detail := RECORD
     t_work_item wi;
     t_FieldNumber classifier;   // Dependent column identifier
@@ -66,28 +190,127 @@ EXPORT Types := MODULE
     t_Discrete predict_class;
     UNSIGNED4 occurs;
     BOOLEAN correct;
+    t_FieldReal pctActual := 0;
+    t_FieldReal pctPred := 0;
   END;
-
-  // generic items, used in association mining
-  EXPORT ItemElement := RECORD
+  /** Classification_Accuracy
+    *
+    * Results layout for Analysis.Classification/Accuracy
+    * @field wi Work item identifier
+    * @field classifier The field number associated with this dependent variable, for
+    *                   multi-variate.  Otherwise 1.
+    * @field errCnt The number of errors (i.e. predicted <> actual)
+    * @field recCnt The total number or records in the test set
+    * @field Raw_Accuracy The percentage of samples properly classified (0.0 - 1.0)
+    * @field PoD Power of Discrimination.  Indicates how this classification performed
+    *           relative to a random guess of class.  Zero or negative indicates that
+    *           the classification was no better than a random guess.  1.0 indicates a
+    *           perfect classification.  For example if there are two equi-probable classes,
+    *           then a random guess would be right about 50% of the time.  If this
+    *           classification had a Raw Accuracy of 75%, then its PoD would be .5
+    *           (half way between a random guess and perfection).
+    * @field PoDE Power of Discrimination Extended.  Indicates how this classification
+    *           performed relative to guessing the most frequent class (i.e. the trivial
+    *           solution).  Zero or negative indicates that this classification is no
+    *           better than the trivial solution.  1.0 indicates perfect classification.
+    *           For example, if 95% of the samples were of class 1, then the trivial
+    *           solution would be right 95% of the time.  If this classification had a
+    *           raw accuracy of 97.5%, its PoDE would be .5 (i.e. half way between
+    *           trivial solution and perfection).
+    *
+    */
+  EXPORT Classification_Accuracy := RECORD
     t_Work_Item wi;
-    t_Item value;
-    t_RecordId id;
+    t_FieldNumber classifier;
+    UNSIGNED recCnt;
+    UNSIGNED errCnt;
+    REAL Raw_Accuracy;
+    REAL PoD;
+    REAL PoDE;
   END;
-
-  // Decision Trees and Random Forest basics
-  EXPORT t_node  := INTEGER4;   // Node Identifier Number in Decision Trees and Random Forest
-  EXPORT t_level := UNSIGNED2;  // Tree Level Number
-  EXPORT NodeID  := RECORD
+  /**
+    * Class_Accuracy
+    *
+    * Results layout for Analysis.Classification.AccuracyByClass
+    * See https://en.wikipedia.org/wiki/Precision_and_recall for a more detailed
+    * explanation.
+    *
+    * @field wi Work item identifier
+    * @field classifier The field number associated with this dependent variable, for
+    *                   multi-variate.  Otherwise 1.
+    * @field class The class to which the analytics apply
+    * @field precision The precision of the classification for this class
+    *                  (i.e. True Positives / (True Positives + FalsePositives)).
+    *                  What percentage of the items that we predicted as being
+    *                  in this class are actually of this class?
+    * @field recall The completeness of recall for this class
+    *                  (i.e. True Positives / (True Positives + False Negatives))
+    *                  What percentage of the items that are actually in this class
+    *                  did we correctly predict as this class?
+    * @field FPR The false positive rate for this class
+    *                  (i.e. False Positives / (False Positives + True Negatives))
+    *                  What percentage of the items not in this class did we falsely
+    *                  predict as this class?
+    *
+    */
+  EXPORT Class_Accuracy := RECORD
     t_Work_Item wi;
-    t_node  node_id;
-    t_level level;
+    t_FieldNumber classifier;
+    t_Discrete class;
+    REAL precision;
+    REAL recall;
+    REAL FPR;
   END;
+  /**
+    * Regression_Accuracy
+    *
+    * Results layout for Analysis.Regression.Accuracy
+    *
+    * @field wi Work item identifier
+    * @field regressor The field number associated with this dependent variable, for
+    *                   multi-variate.  Otherwise 1.
+    * @field R2 The R-Squared value (Coefficient of Determination) for the regression.
+    *           R-squared of zero or negative indicates that the regression has no predictive
+    *           value.  R2 of 1 would indicate a perfect regression.
+    * @field MSE Mean Squared Error = SUM((predicted - actual)^2) / N (number of datapoints)
+    * @field RMSE Root Mean Squared Error = MSE^.5 (Square root of MSE)
+    *
+    */
+  EXPORT Regression_Accuracy := RECORD
+    t_Work_Item wi;
+    t_FieldNumber regressor;
+    t_FieldReal R2;
+    t_FieldReal MSE;
+    t_FieldReal RMSE;
+  END;
+  // End Analytic result structures
 
   // Data diagnostic definition
   EXPORT Data_Diagnostic := RECORD
     t_work_item wi;
     BOOLEAN valid;                 // Flag indicating failure of ANY diagnostic tests for wi
     SET OF VARSTRING message_text; // List of failed diagnostic tests for a wi
+  END;
+
+  /**
+    * Field_Mapping is the format produced by ToField for field-name mapping.
+    * 
+    * @field orig_name The name of the field in the original layout
+    * @field assigned_name The integer field number used in the ML algorithm stored as a STRING
+    *
+    */
+  EXPORT Field_Mapping := RECORD
+    STRING orig_name;      // The name of the field in the original layout
+    STRING assigned_name;  // The integer field number used in the ML algorithm
+  END;
+  /**
+    * LUCI Record -- A dataset of lines each containing a string
+    * This is the DATASET format in which ML algorithm export LUCI files.
+    *
+    * @field line A single line in the LUCI csv file
+    *
+    */
+  EXPORT LUCI_Rec := RECORD
+    STRING line;
   END;
 END;
