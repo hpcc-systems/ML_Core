@@ -19,15 +19,16 @@ Class_Accuracy := Types.Class_Accuracy; // Return structure for Classification.A
 Regression_Accuracy := Types.Regression_Accuracy; // Return structure for Regression.Accuracy
 
 /**
-  * This module provides functions for analyzing and assessing the effectiveness of a Machine
+  * Analyze and assess the effectiveness of a Machine
   * Learning model.
+  * <p>Sub-modules provide support for both Classification and Regression.
   *
-  * Each of these functions support multi-work-item (i.e. Myriad interface) data, as well as
+  * <p>Each of the functions in this module support multi-work-item (i.e. Myriad interface) data, as well as
   * multi-variate data (supported by some ML bundles).  The number field, which is usually
   * = 1 for uni-variate data is used to distinguish multiple regressors in the case of multi-
   * variate models.
   *
-  */
+  **/
 EXPORT Analysis := MODULE
   /**
     * This sub-module provides functions for analyzing and assessing the effectiveness of
@@ -43,7 +44,7 @@ EXPORT Analysis := MODULE
       * @return DATASET(Class_Stats), one record per work-item, per classifier (i.e. number field) per
       *         class.
       * @see ML_Core.Types.Class_Stats
-      */
+      **/
     EXPORT DATASET(Class_Stats) ClassStats(DATASET(DiscreteField) actual) := FUNCTION
       // Returns for each class: label, count, pct
       recStats := TABLE(actual, {wi, number, cnt := COUNT(GROUP)}, wi, number);
@@ -76,13 +77,13 @@ EXPORT Analysis := MODULE
       * Returns the Confusion Matrix, counting the number of cases for each combination of predicted Class and
       * actual Class.
       *
-      * @param predicted The predicted values for each id in DATASET(DiscreteField) format
-      * @param actual The actual (i.e. expected) values for each id in DATASET(DiscreteField) format
+      * @param predicted The predicted values for each id in DATASET(DiscreteField) format.
+      * @param actual The actual (i.e. expected) values for each id in DATASET(DiscreteField) format.
       * @return DATASET(Confusion_Detail).  One record for each combination of work-item, number (i.e. classifier),
       *         predicted class, and actual class.
       * @see ML_Core.Types.Confusion_Detail
       *
-      */
+      **/
     EXPORT DATASET(Confusion_Detail) ConfusionMatrix(DATASET(DiscreteField) predicted, DATASET(DiscreteField) actual) := FUNCTION
       cmp := CompareClasses(predicted, actual);
       // Count the number of samples that were actually of each class
@@ -108,17 +109,17 @@ EXPORT Analysis := MODULE
       RETURN cm;
     END; // ConfusionMatrix
     /**
-      * Assess the overall accuracy of the classification predictions
+      * Assess the overall accuracy of the classification predictions.
       *
-      * ML_Core.Types.Classification_Accuracy provides a detailed description of the return values. 
+      * <p>ML_Core.Types.Classification_Accuracy provides a detailed description of the return values. 
       *
-      * @param predicted The predicted values for each id in DATASET(DiscreteField) format
-      * @param actual The actual (i.e. expected) values for each id in DATASET(DiscreteField) format
+      * @param predicted The predicted values for each id in DATASET(DiscreteField) format.
+      * @param actual The actual (i.e. expected) values for each id in DATASET(DiscreteField) format.
       * @return DATASET(Classification_Accuracy).  One record for each combination of work-item, and
       *         number (i.e. classifier).
       * @see ML_Core.Types.Classification_Accuracy
       *
-      */
+      **/
     EXPORT DATASET(Classification_Accuracy) Accuracy(DATASET(DiscreteField) predicted, DATASET(DiscreteField) actual) := FUNCTION
       // Returns Raw, PoD, PoDE
       cStats := ClassStats(actual);
@@ -148,15 +149,15 @@ EXPORT Analysis := MODULE
       * Provides per class accuracy / relevance statistics (e.g. Precision / Recall,
       * False-positive Rate).
       * 
-      * ML_Core.Types.Class_Accuracy provides a detailed description of the return values. 
+      * <p>ML_Core.Types.Class_Accuracy provides a detailed description of the return values. 
       *
-      * @param predicted The predicted values for each id in DATASET(DiscreteField) format
-      * @param actual The actual (i.e. expected) values for each id in DATASET(DiscreteField) format
+      * @param predicted The predicted values for each id in DATASET(DiscreteField) format.
+      * @param actual The actual (i.e. expected) values for each id in DATASET(DiscreteField) format.
       * @return DATASET(Class_Accuracy).  One record for each combination of work-item, number (i.e. classifier),
       *         and class.
       * @see ML_Core.Types.Class_Accuracy
       *
-      */
+      **/
     EXPORT DATASET(Class_Accuracy) AccuracyByClass(DATASET(DiscreteField) predicted, DATASET(DiscreteField) actual) := FUNCTION
       // Returns Precision, Recall, False Positive Rate(FPR)
       allClasses0 := SORT(actual, wi, number, value);
@@ -192,15 +193,15 @@ EXPORT Analysis := MODULE
     */
   EXPORT Regression := MODULE
     /**
-      * Assess the overall accuracy of the regression predictions
+      * Assess the overall accuracy of the regression predictions.
       *
-      * @param predicted The predicted values for each id in DATASET(DiscreteField) format
-      * @param actual The actual (i.e. expected) values for each id in DATASET(DiscreteField) format
+      * @param predicted The predicted values for each id in DATASET(DiscreteField) format.
+      * @param actual The actual (i.e. expected) values for each id in DATASET(DiscreteField) format.
       * @return DATASET(Regression_Accuracy).  One record for each combination of work-item, and
       *         number (i.e. regressor).
       * @see ML_Core.Types.Regression_Accuracy
       *
-      */
+      **/
     EXPORT DATASET(Regression_Accuracy) Accuracy(DATASET(NumericField) predicted, DATASET(NumericField) actual) := FUNCTION
       // Returns R-squared, MSE, RMSE
       meanAct := TABLE(actual, {wi, number, REAL mean := AVE(GROUP, value), cnt := COUNT(GROUP)}, wi, number);

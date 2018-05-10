@@ -1,10 +1,10 @@
 /**
- * Return the lower incomplete gamma value of two real numbers,
- *  x and y
- *@param x  the value of the first number
- *@param y  the value of the second number
- *@return   the lower incomplete gamma value
- */
+  * Compute the lower incomplete gamma value of two real numbers,
+  *  x and y.
+  * @param x  the value of the first number.
+  * @param y  the value of the second number.
+  * @return   the lower incomplete gamma value.
+  **/
 EXPORT REAL8 lowerGamma(REAL8 x, REAL8 y) := BEGINC++
   #option pure
   #include <math.h>

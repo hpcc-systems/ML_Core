@@ -1,17 +1,29 @@
 //Normal, Student and Chi Squared distributions for tests
 IMPORT $.^.Constants AS Core_Const;
 IMPORT $ AS Math;
-
+/**
+  * <p>Compute PDF, CDF, and PPF values for various Probability Distributions.
+  * <p>The Probability Density Function(PDF(x)) of a distribution is 
+  * the relative likelihood of a sample drawn from that distribution being
+  * of value x.
+  * <p>The Cumulative Distribution Function (CDF(x)) of a distribution
+  * is the probability of a sample drawn from that distribution to be
+  * less than or equal to x.
+  * <p>The Percentage Point Function (PPF(x)) of a distribution is the
+  * inverse of the CDF.  Given a probability, it returns the value
+  * at which the probability of occurrence is less than or equal to the
+  * given probability.
+  **/
 EXPORT Distributions := MODULE
   /**
-   * Cumulative Distribution of the standard normal distribution, the
-   *probability that a normal random variable will be smaller than x
-   * standard deviations above or below the mean.
-   * Taken from C/C++ Mathematical Algorithms for Scientists and
-   *Engineers, n. Shammas, McGraw-Hill, 1995
-   * @param x the number of standard deviations
-   * @returns probability of exceeding x.
-   */
+    * Cumulative Distribution Function (CDF) of the standard normal distribution. The
+    * probability that a normal random variable will be smaller than
+    * or equal to x standard deviations above or below the mean.
+    * <p>Taken from C/C++ Mathematical Algorithms for Scientists and
+    * Engineers, n. Shammas, McGraw-Hill, 1995.
+    * @param x the number of standard deviations.
+    * @return probability of exceeding x.
+    **/
   EXPORT REAL8 Normal_CDF(REAL8 x) := DEFINE FUNCTION
     b1 := 0.319381530;
     b2 :=-0.356563782;
@@ -31,11 +43,11 @@ EXPORT Distributions := MODULE
   END;
 
   /**
-   * Normal Distribution Percentage Point Function.
-   * Translated from C/C++ Mathematical Algorithms for Scientists and
-   * Engineers, N. Shammas, McGraw-Hill, 1995
-   * @param x probability
-   * @returns number of standard deviations from the mean
+    * Percentage Point Function (PPF) for the Normal Distribution.
+    * <p>Translated from C/C++ Mathematical Algorithms for Scientists and
+    * Engineers, N. Shammas, McGraw-Hill, 1995.
+    * @param x probability.
+    * @return number of standard deviations from the mean.
    */
   EXPORT REAL8 Normal_PPF(REAL8 x) := DEFINE FUNCTION
     p0 := -0.322232431088;
@@ -72,14 +84,15 @@ EXPORT Distributions := MODULE
     return work_sum;
   ENDC++;
   /**
-   * Students t distribution integral evaluated between negative
-   * infinity and x.
-   * Translated from NIST SEL DATAPAC Fortran TCDF.f source
-   * @param x value of the evaluation
-   * @param df degrees of freedom
-   * @returns the probability that a value will be less than the
-   * specified value
-   */
+    * Cumulative Distribution Function (CDF) for Students t distribution.
+    * <p>The integral evaluated between negative
+    * infinity and x.
+    * <p>Translated from NIST SEL DATAPAC Fortran TCDF.f source.
+    * @param x value of the evaluation.
+    * @param df degrees of freedom.
+    * @return the probability that a value will be less than or equal to the
+    * specified value.
+    **/
   EXPORT REAL8 T_CDF(REAL8 x, REAL8 df) := DEFINE FUNCTION
     INTEGER4 DF_Cut := 1000;
     REAL8 PI := Core_Const.Pi;
@@ -206,8 +219,11 @@ EXPORT Distributions := MODULE
     return position;
   ENDC++;
   /**
-   * Percentage point function for the T distribution.
-   * Translated from NIST SEL DATAPAC Fortran TPPF.f source
+   * Percentage point function (PPF) for the T distribution.
+   * <p>Translated from NIST SEL DATAPAC Fortran TPPF.f source.
+   * @param x the probability.
+   * @param df degrees of freedom of the distribution.
+   * @return the value with that probability.
    */
   EXPORT REAL8 T_PPF(REAL8 x, REAL8 df) := DEFINE FUNCTION
     REAL8 PI := Core_Const.Pi; //3.14159265358979;
@@ -282,11 +298,13 @@ EXPORT Distributions := MODULE
     return term_sum;
   ENDC++;
   /**
-   * The cumulative distribution function for the Chi Square
-   * distribution.
-   * the CDF for the specfied degrees of freedom.
-   * Translated from the NIST SEL DATAPAC Fortran subroutine CHSCDF.
-   */
+    * The Cumulative Distribution Function (CDF) for the Chi Square
+    * distribution for the specified degrees of freedom.
+    * <p>Translated from the NIST SEL DATAPAC Fortran subroutine CHSCDF.
+    * @param x the value at which to compute.
+    * @param df the degrees of freedom of the distribution.
+    * @return the cumulative probability.
+    **/
   EXPORT REAL8 Chi2_CDF(REAL8 x, REAL8 df) := DEFINE FUNCTION
     INTEGER4 DF_Cut := 1000;
     REAL8 PI := Core_Const.Pi; //3.14159265358979;
@@ -393,8 +411,11 @@ EXPORT Distributions := MODULE
       return 2.0 * target_pos;
   ENDC++;
   /**
-   * The Chi Squared PPF function.
-   * Translated from the NIST SEL DATAPAC Fortran subroutine CHSPPF.
+   * Probability Point Function (PPF) for the Chi Squared distribution.
+   * <p>Translated from the NIST SEL DATAPAC Fortran subroutine CHSPPF.
+   * @param x the probability value.
+   * @param df the degrees of freedom of the distribution.
+   * @return the value with that probability.
    */
   EXPORT REAL8 Chi2_PPF(REAL8 x, REAL8 df) := FUNCTION
     critical := 100;

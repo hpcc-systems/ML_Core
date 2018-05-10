@@ -1,18 +1,19 @@
 /**
- * Given a file which is sorted by the work item identifier and
- * INFIELD (and possibly other values), add sequence numbers within
- * the range of each infield.
- * Slighly elaborate code is to avoid having to partition the data
- * to one value of infield per node and to work with very large
- * numbers of records where a global count project would be
- * inappropriate.
- * This is useful for assigning rank positions with the groupings.
- *@param infile the input file, any type
- *@param infield field name of grouping field
- *@param seq name of the field to receive the sequence number
- *@param wi_name work item field name, default is wi
- *@return a file of the same type with sequence numbers applied
- */
+  * Assign sequence numbers within groups for a dataset.
+  * Given a file (dataset) which is sorted by the work item identifier and
+  * INFIELD (and possibly other values), add sequence numbers within
+  * the range of each infield.
+  * Slighly elaborate code is to avoid having to partition the data
+  * to one value of infield per node and to work with very large
+  * numbers of records where a global count project would be
+  * inappropriate.
+  * This is useful for assigning rank positions with the groupings.
+  *@param infile the input file, any type.
+  *@param infield field name of grouping field.
+  *@param seq name of the field to receive the sequence number.
+  *@param wi_name work item field name, default is wi.
+  *@return a file of the same type with sequence numbers applied.
+  */
 EXPORT SequenceInField(infile,infield,seq,wi_name='wi') := FUNCTIONMACRO
   IMPORT Std.System.ThorLib;
   LOCAL extend_rec := RECORD(RECORDOF(infile))

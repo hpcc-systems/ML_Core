@@ -1,11 +1,13 @@
 IMPORT $.^.Types AS Types;
 /**
- * Will take a potentially sparse file d and fill in the missing
- * with value v for Numeric Field datasets
- *@param d0 They myriad format Numeric Field dataset to be filled
- *@param v  The value to assign missing records
- *@return A full Numeric Field dataset with every field populated
- */
+  * Make a sparse NumericField dataset dense by filling
+  * in missing values.  All empty cells are set to the designated
+  * value.
+  *
+  *@param d0 They NumericField dataset to be filled.
+  *@param v  The value to assign missing records.
+  *@return A full NumericField dataset with every field populated.
+  */
 EXPORT DATASET(Types.NumericField)
        Fat(DATASET(Types.NumericField) d0,
            Types.t_FieldReal v=0) := FUNCTION

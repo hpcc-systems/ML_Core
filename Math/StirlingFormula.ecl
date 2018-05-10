@@ -3,10 +3,10 @@ IMPORT $.^.Constants AS Constants;
 PI := Constants.PI;
 Poly := Utils.Poly;
 /**
- * Stirling's formula
- *@param x the point of evaluation
- *@return evaluation result
- */
+  * Stirling's formula.
+  * @param x the point of evaluation.
+  * @return evaluation result.
+  **/
 EXPORT StirlingFormula(REAL x) :=FUNCTION
    stirCoefs :=[7.87311395793093628397E-4,
                 -2.29549961613378126380E-4,

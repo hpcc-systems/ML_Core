@@ -1,15 +1,19 @@
 /*##############################################################################
-## HPCC SYSTEMS software Copyright (C) 2018 HPCC Systems®.  All rights reserved.
+## HPCC SYSTEMS software Copyright (C) 2018 HPCC Systems.  All rights reserved.
 ############################################################################## */
 /**
-  * Macro to convert a NumericField formatted dataset to a Record formatted
+  * Macro to convert a NumericField formatted, cell-based dataset to a Record formatted
   * dataset.  Typically used to return converted NumericField data back to
   * its original layout.
-  * 
-  * In the simplest case, the assumption is that the field order of the
+  *
+  * <p>Note that as a Macro, nothing is returned, but new attributes are created
+  * in-line for use in subsequent definitions.
+
+  * <p>In the simplest case, the assumption is that the field order of the
   * resulting table is in line with the field number in the input
   * dataset, with the ID field as the first field.
-  * For example:
+  * <p>For example:
+  * <pre>
   *   myRec := RECORD
   *     UNSIGNED recordId;
   *     REAL height;
@@ -18,25 +22,27 @@
   *   Value of NumericField records with field number = 1 would go to height.
   *   Value of NumericField records with field number = 2 would go to weight.
   *   The id field of the NumericField record would be mapped to the recordId
-  *   field of the result.
+  *   field of the result.</pre>
   *
-  * If the field orders have been changed (e.g. by customizing the ToField
+  * <p>If the field orders have been changed (e.g. by customizing the ToField
   * process, a field-mapping should be specified (See dMap below).
   *
   * Usage Examples:
+  * <pre>
   *  ML.FromField(myNFData, myRecordLayout, myRecordData);
   *  // Datamap to reorder the weight and height fields in the example above
   *  dataMap := DATASET([{'weight', '1'},
                          {'height', '2'}], Types.Field_Mapping);
-  *  ML.FromField(nyNFData, myRecordLayout, myRecordData, dataMap);
+  *  ML.FromField(nyNFData, myRecordLayout, myRecordData, dataMap);</pre>
   *
-  * @param dIn The name of the input dataset in NumericField format
+  * @param dIn The name of the input dataset in NumericField format.
   * @param lOut The name of the layout record defining the records of the
-  *             result dataset
-  * @param dOut The name of the result dataset
+  *             result dataset.
+  * @param dOut The name of the result dataset.
   * @param dMap [OPTIONAL] A Field_Mapping dataset as produced by ToField
   *             that describes the mapping between field name and field number.
   *             The format of this map is defined by Types.Field_Mapping.
+  * @return Nothing. The MACRO creates new attributes in-line as described above.
   * @see Types.NumericField
   * @see Types.Field_Mapping
   * @see ToField
