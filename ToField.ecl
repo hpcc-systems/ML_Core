@@ -1,18 +1,43 @@
 /*##############################################################################
-## HPCC SYSTEMS software Copyright (C) 2018 HPCC Systems®.  All rights reserved.
+## HPCC SYSTEMS software Copyright (C) 2018 HPCC Systems.  All rights reserved.
 ############################################################################## */
-/** 
-  * ToField Macro takes a matrix dataset, with each row containing an ID and one or
-  * more axis fields containing numeric values, and expands it into the
+/**
+  * Convert a record-oriented dataset to a cell-oriented NumericField dataset
+  * for use with Machine Learning mechanisms.
+  * <p>ToField Macro takes a record-oriented dataset, with each row containing
+  * an ID and one or more numeric fields, and expands it into the
   * NumericField format used by ML.
   *
-  * @param dIn The name of the input dataset
-  * @param dOut The name of the resulting dataset
+  * <p>Note that as a Macro, nothing is returned, but new attributes are created
+  * in-line for use in subsequent definitions.
+  *
+  * <p>Along with creating the NumericField table, this macro produces two
+  * simple functions to assist the user in mapping the field names to their
+  * corresponding numbers.  These are "STRING dOut_ToName(UNSIGNED)" and
+  * "UNSIGNED dOut_ToNumber(STRING)", where the "dOut" portion of the function
+  * name is the name passed into that parameter of the macro.
+  *
+  * <p>The macro also produces a mapping table named "dOut_Map", again where
+  * "dOut" refers to the parameter, that contains a table of the field
+  * mappings.  See Types.Field_Mapping for the layout of this mapping dataset.
+  *
+  * Examples:
+  * <pre>
+  *   ML.ToField(dOrig,dMatrix);
+  *   ML.ToField(dOrig,dMatrix,myid,'field5,field7,field10');
+  *   dMatrix_ToName(2);    // returns 'field7'
+  *   dMatrix_ToNumber('field10'); // returns 3
+  *   dMatrix_Map;  // returns the mapping table of field name to number see 
+  *                 // Types.Field_Mapping
+  * </pre>
+  *
+  * @param dIn The name of the input dataset.
+  * @param dOut The name of the resulting dataset.
   * @param idfield [OPTIONAL] The name of the field that contains the UID for
   *                each row.  If omitted, it is assumed to be the first field.
   * @param wifield [OPTIONAL] The name of the field that contains the
   *                work item value.  A constant is used if the field name
-  *                is not supplied (as provided by wivalue below)
+  *                is not supplied (as provided by wivalue below).
   * @param wivalue [OPTIONAL} The constant value to use for work item.
   *                The value 1 is used if not supplied.
   * @param datafields [OPTIONAL] A STRING containing a comma-delimited list of the
@@ -21,26 +46,9 @@
   *                   NOTE: idfield defaults to the first field in the table, so
   *                   if that field is specified as an axis field, then the user
   *                   should be sure to specify a value in the idfield param.
-  * @return Nothing.  The MACRO creates new attributes in-line as described below.
-  *
-  * Along with creating the NumericField table, this macro produces two
-  * simple functions to assist the user in mapping the field names to their
-  * corresponding numbers.  These are "STRING dOut_ToName(UNSIGNED)" and
-  * "UNSIGNED dOut_ToNumber(STRING)", where the "dOut" portion of the function
-  * name is the name passed into that parameter of the macro.
-  *
-  * The macro also produces a mapping table named "dOut_Map", again where
-  * "dOut" refers to the parameter, that contains a table of the field
-  * mappings.  See Types.Field_Mapping for the layout of this mapping dataset.
-  *
-  * Examples:
-  *   ML.ToField(dOrig,dMatrix);
-  *   ML.ToField(dOrig,dMatrix,myid,'field5,field7,field10');
-  *   dMatrix_ToName(2);    // returns 'field7'
-  *   dMatrix_ToNumber('field10'); // returns 3
-  *   dMatrix_Map;  // returns the mapping table of field name to number see 
-  *                 // Types.Field_Mapping
-  *
+  * @return Nothing. The MACRO creates new attributes in-line as described above.
+  * @see Types.NumericField
+  * @see Types.Field_Mapping
   */
 EXPORT ToField(dIn, dOut, idfield='', wifield='', wivalue='', datafields=''):=MACRO
   IMPORT ML_Core;

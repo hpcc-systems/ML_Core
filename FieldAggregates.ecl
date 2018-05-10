@@ -2,7 +2,11 @@ IMPORT $ AS ML_Core;
 IMPORT ML_Core.Types AS Types;
 IMPORT ML_Core.Utils AS Utils;
 IMPORT Std.System.ThorLib;
-
+/**
+  * Calculate various statistical aggregations of the fields in
+  * a NumericField dataset.
+  * @param d The dataset to be aggregated.
+  **/
 EXPORT FieldAggregates(DATASET(Types.NumericField) d) := MODULE
   // Simple statistics
   SingleField := RECORD
@@ -16,6 +20,14 @@ EXPORT FieldAggregates(DATASET(Types.NumericField) d) := MODULE
     Types.t_fieldreal var     :=VARIANCE(GROUP,d.Value);
     Types.t_fieldreal sd      :=SQRT(VARIANCE(GROUP,d.Value));
   END;
+  /**
+    * Calculate basic statistics about each field.
+    * <p>Calculates: min, max, sum, count, mean, variance, and
+    * standard deviation for each field.
+    * <p>There are no parameters.
+    * <p>Example:
+    * <pre>myAggs := FieldAggregates(myDS).simple;</pre>
+    **/
   EXPORT Simple:=TABLE(d,SingleField, wi, Number,FEW);
   // Simple Ranked
   RankableField := RECORD
@@ -25,6 +37,14 @@ EXPORT FieldAggregates(DATASET(Types.NumericField) d) := MODULE
   Sorted_D := SORT(D,wi,Number,Value);
   T := TABLE(Sorted_D,RankableField);
   P := Utils.SequenceInField(T, Number, Pos, wi);
+  /**
+    * Calculate the rank (order) of each cell for each field.
+    * <p>The returned data adds a 'Pos' field to each cell, indicating
+    * its rank within it's field number.
+    * <p> There are no parameters.
+    * <p> Example:
+    * <pre>myRankedDS := FieldAggregates(myDS).SimpleRanked;</pre>
+    **/
   EXPORT SimpleRanked := P;
   // Medians
   dMedianPos:=TABLE(SimpleRanked,
@@ -39,6 +59,13 @@ EXPORT FieldAggregates(DATASET(Types.NumericField) d) := MODULE
                       TRANSFORM({RECORDOF(SimpleRanked) AND NOT [id,pos];},
                                 SELF:=LEFT;),
                       LOOKUP);
+  /**
+    * Calculate the median value of each field.
+    * <p> There are no parameters.
+    * @return DATASET({wi, number, median}), one record per work-item and field number.
+    * <p>Example:
+    * <pre>myFieldMedians := FieldAggregates(myDS).Medians;</pre>
+    **/
   EXPORT Medians:=TABLE(dMedianValues,
          {wi, number;
           TYPEOF(dMedianValues.value) median:=IF(COUNT(GROUP)=1,
@@ -71,10 +98,28 @@ EXPORT FieldAggregates(DATASET(Types.NumericField) d) := MODULE
            (Types.t_Discrete)(n*((L.value-R.minval)/(R.maxval-R.minval)))+1);
     SELF:=L;
   END;
+  /**
+    * Bucketize the datapoints into N buckets for each field.
+    * <p>Bucketization splits the range of the data into N equal size
+    * range buckets.  The data will not normally be evenly split
+    * among buckets unless it is uniformly distributed.  Contrast this
+    * with N-tile, where the data is split nearly evenly.
+    * @param n The number of buckets to use.
+    * @return DATASET OF {wi, id, number, value, pos, bucket}, where
+    *         pos is the rank within each field, and bucket is the
+    *         bucket number. 
+    **/
   EXPORT Buckets(Types.t_Discrete n)
         :=JOIN(SimpleRanked,Simple,
                LEFT.wi=RIGHT.wi AND LEFT.number=RIGHT.number,
                tAssign(LEFT,RIGHT,n),LOOKUP);
+  /**
+    * Return the ranges associated with each of N buckets
+    * as computed by 'Buckets' above.
+    * @param n The number of buckets.
+    * @return DATASET OF {wi, number, bucket, Min, and Max}, one for
+    *         each bucket for each field.
+    **/
   EXPORT BucketRanges(Types.t_Discrete n)
         :=TABLE(Buckets(n),
                 {wi, number;bucket;
@@ -93,6 +138,13 @@ EXPORT FieldAggregates(DATASET(Types.NumericField) d) := MODULE
   SHARED T := TABLE(SimpleRanked, MR, wi, Number, Value);
   dModeVals:=TABLE(T,{wi,number;UNSIGNED modeval:=MAX(GROUP,valcount);},
                   wi, number,FEW);
+  /**
+    * Calculate the mode (i.e. the most common value) for each field
+    *
+    * <p>There are no parameters.
+    * @return DATASET OF {wi, number, mode, cnt}, one per field.
+    *          'cnt' is the number of times the mode value occurred.
+    **/
   EXPORT Modes:=JOIN(T,dModeVals,
                     LEFT.wi=RIGHT.wi AND LEFT.number=RIGHT.number
                     AND LEFT.valcount=RIGHT.modeval,
@@ -103,6 +155,12 @@ EXPORT FieldAggregates(DATASET(Types.NumericField) d) := MODULE
                              SELF:=LEFT;),
                     LOOKUP);
   // Cardinality
+  /**
+    * Returns the cardinality of each field.  That is the number of different
+    * values occurring in each field.
+    * <p>There are no parameters.
+    * @return DATASET OF {wi, number, cardinality}, one per field.
+    **/
   EXPORT Cardinality:=TABLE(T,{wi, number;
                         UNSIGNED cardinality:=COUNT(GROUP);},wi, number);
   // Ranked
@@ -125,10 +183,24 @@ EXPORT FieldAggregates(DATASET(Types.NumericField) d) := MODULE
                     (Types.t_Discrete)(n*((L.pos-1)/R.countval))+1);
     SELF:=L;
   END;
+  /**
+    * Calculate the N-tile of each datapoint within its field.
+    * For example, if N is 100, we calculate percentiles.
+    * @param n The number of groups into which to balance the data
+    * @return DATASET OF {wi, id, number, value, pos, ntile}, where
+    *         pos is the rank within each field.
+    **/
   EXPORT NTiles(Types.t_Discrete n):=JOIN(RankedInput, Simple,
                                 LEFT.wi=RIGHT.wi
                                 AND LEFT.number=RIGHT.number,
                                 tNTile(LEFT,RIGHT,n),LOOKUP);
+  /**
+    * Return the ranges associated with each of N-tiles
+    * as computed by 'Ntiles' above.
+    * @param n The number of N-tile groups.
+    * @return DATASET OF {wi, number, bucket, Min, and Max}, one for
+    *         each N-tile group for each field.
+    **/
   EXPORT NTileRanges(Types.t_Discrete n):=TABLE(NTiles(n),
                       {wi;number;ntile;
                        Types.t_fieldreal Min:=MIN(GROUP,value);

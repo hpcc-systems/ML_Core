@@ -1,5 +1,5 @@
-/*##############################################################################
-## HPCC SYSTEMS software Copyright (C) 2016 HPCC Systems®.  All rights reserved.
+/*#############################################################################
+## HPCC SYSTEMS software Copyright (C) 2016 HPCC Systems. All rights reserved.
 ############################################################################## */
 IMPORT $.^ as ML_Core;
 IMPORT ML_Core.Types;
@@ -17,7 +17,7 @@ null_model := DATASET([], Layout_Model2);
 empty_data := DATASET([], NumericField);
 
 /**
-  * Interface Definition for Regression Modules (Version 2)
+  * Interface Definition for Regression Modules (Version 2).
   *
   * Regression learns a function that maps a set of input data
   * to one or more continuous output variables.  The resulting learned function is
@@ -31,9 +31,9 @@ empty_data := DATASET([], NumericField);
   */
 EXPORT IRegression2 := MODULE, VIRTUAL
   /**
-    * Calculate and return the 'learned' model
+    * Calculate and return the 'learned' model.
     *
-    * The model may be persisted and later used to make predictions
+    * <p>The model may be persisted and later used to make predictions
     * using 'Predict' below.
     *
     * @param independents The independent data in DATASET(NumericField) format.
@@ -44,7 +44,7 @@ EXPORT IRegression2 := MODULE, VIRTUAL
     *          Each statistical unit (e.g. record) is identified by
     *          'id', and each feature is identified by field number (i.e.
     *          'number').
-    * @return The encoded model
+    * @return The encoded model.
     * @see Types.NumericField
     * @see Types.Layout_Model2
     */
