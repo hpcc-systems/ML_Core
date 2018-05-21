@@ -4,11 +4,11 @@ log_gamma := Math.log_gamma;
 MAXGAM := 171;
 ASYMP := 1000000; //1e6
 /**
- * Return the beta value of two positive real numbers, x and y
- *@param x  the value of the first number
- *@param y  the value of the second number
- *@return   the beta value
- */
+  * Compute the beta value of two positive real numbers, x and y.
+  * @param x  the value of the first number
+  * @param y  the value of the second number
+  * @return   the beta value
+  **/
 EXPORT Beta(REAL8 x, REAL8 y) := FUNCTION
    absx := ABS(x);
    intx := (INTEGER) absx;

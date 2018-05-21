@@ -1,10 +1,10 @@
 /**
- * Return the upper incomplete gamma value of two real numbers,
- * x and y.
- *@param x  the value of the first number
- *@param y  the value of the second number
- *@return   the upper incomplete gamma value
- */
+  * Compute the upper incomplete gamma value of two real numbers,
+  * x and y.
+  * @param x  the value of the first number.
+  * @param y  the value of the second number.
+  * @return   the upper incomplete gamma value.
+  **/
 EXPORT REAL8 upperGamma(REAL8 x, REAL8 y) := BEGINC++
   #option pure
   #include <math.h>

@@ -8,46 +8,44 @@ IMPORT ML_Core.Types as Types;
   */
 EXPORT CrossValidation := MODULE
   /**
-    * N-Fold Cross Validation
-    *
-    * N-Fold Cross Validation is a way to validate the effectiveness
+    * <p>N-Fold Cross Validation is a way to validate the effectiveness
     * of a regression or classification without having to segregate
     * test data from training data.
-    * The results of the N-Fold Cross Validation approximate the expected result
+    * <p>The results of the N-Fold Cross Validation approximate the expected result
     * of training on all of the data samples and testing those results on other
     * data from the same distribution.
-    * This allows a model that is built on all available labeled data to be
+    * <p>This allows a model that is built on all available labeled data to be
     * effectively assessed. Note that this process does not produce the target
     * model, but only estimates the 'out-of-sample' error statistics that such
     * a model would produce.
-    * The method is as follows:
-    * - Randomly split independent and dependent data into N (e.g. 10) 'folds'
-    * - Train N separate models, using N-1 of the folds as training data (e.g. 9)
-    * - Test each model using the 1 fold that was not in the training set
-    * - Aggregate the test results across the N tests
+    * <p>The method is as follows:<ul>
+    * <li>Randomly split independent and dependent data into N (e.g. 10) 'folds'.</li>
+    * <li>Train N separate models, using N-1 of the folds as training data (e.g. 9).</li>
+    * <li>Test each model using the 1 fold that was not in the training set.</li>
+    * <li>Aggregate the test results across the N tests.</li></ul>
     *
-    * Any of the HPCC Machine Learning methods may be used with N-Fold Cross Validation
+    * <p>Any of the HPCC Machine Learning methods may be used with N-Fold Cross Validation
     * The ML module to be used is passed as a parameter.
-    * N-Fold Cross Validation can be used for regression or classification.  If the
+    * <p>N-Fold Cross Validation can be used for regression or classification.  If the
     * dependent data is in NumericField format, it is treated as a regression and
     * regression analytics are returned.  If it is in DiscreteField format, then
     * it is treated as a Classification, and Classification analytics are return.
-    * Using the wrong dependent data type for the given learner will result in un-
+    * <p>Using the wrong dependent data type for the given learner will result in un-
     * handled errors.
-    * The returned MODULE exports the following attributes:
-    * For Classification:
-    * - ClassStats - Assesses Classes Contained in the Training Data (see Types.Class_Stats)
-    * - Accuracy Overall Accuracy of the classification (see Types.Classification_Accuracy)
-    * - AccuracyByClass Precision and Recall for each class (see Types.Class_Accuracy)
-    * - ConfusionMatrix Frequency of predicted / actual class pairings (see Types.Consusion_Detail)
-    * For Regression:
-    * - Accuracy (see Types.Regression_Accuracy)
+    * <p>The returned MODULE exports the following attributes:
+    * <p>For Classification:<ul>
+    * <li>ClassStats - Assesses Classes Contained in the Training Data (see Types.Class_Stats).</li>
+    * <li>Accuracy Overall Accuracy of the classification (see Types.Classification_Accuracy).</li>
+    * <li>AccuracyByClass Precision and Recall for each class (see Types.Class_Accuracy).</li>
+    * <li>ConfusionMatrix Frequency of predicted / actual class pairings (see Types.Consusion_Detail).</li></ul>
+    * <p>For Regression:<ul>
+    * <li>Accuracy (see Types.Regression_Accuracy).</li></ul>
     *
     * @param LearnerName The attribute that holds the instantiated ML module.
     * @param IndepDS The independent data to be used for training and testing.
     * @param DepDS The dependent data to be used for training and testing.
     * @param NumFolds The number of folds to use.  Ten is typically considered adequate.
-    * @return Result MODULE with attributes for assessing the strength of the model
+    * @return Result MODULE with attributes for assessing the strength of the model.
     * 
     */
   EXPORT NFoldCV(LearnerName, IndepDS, DepDS, NumFolds) := FUNCTIONMACRO

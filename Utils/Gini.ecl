@@ -1,12 +1,13 @@
 /**
- * Creates a file of pivot/target pairs with a Gini impurity value.
- *@param infile the input file, any type with a work item field
- *@param pivot  the name of the pivot field
- *@param target the name of the field used as the target
- *@param wi_name the name of the work item field, default is "wi"
- *return        A table by Work Item and Pivot value giving count and
- *              Gini impurity value
- */
+  * Create a file of pivot/target pairs with a Gini impurity value.
+  *
+  *@param infile the input file, any type with a work item field.
+  *@param pivot  the name of the pivot field.
+  *@param target the name of the field used as the target.
+  *@param wi_name the name of the work item field, default is "wi".
+  *@return        A table by Work Item and Pivot value giving count and
+  *              Gini impurity value.
+  */
 EXPORT Gini(infile, pivot, target, wi_name='wi') := FUNCTIONMACRO
   // First count up the values of each target for each pivot
   LOCAL agg := TABLE(infile,

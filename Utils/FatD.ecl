@@ -1,11 +1,13 @@
 IMPORT $.^.Types AS Types;
 /**
- * Will take a potentially sparse file d and fill in the missing
- * with value v for Discrete Field datasets
- *@param d0 They myriad format Discrete Field dataset to be filled
- *@param v  The value to assign missing records
- *@return A full Discrete Field dataset with every field populated
- */
+  * Make a sparse DiscreteField dataset dense by filling
+  * in missing values.  All empty cells are set to the designated
+  * value.
+  *
+  *@param d0 The DiscreteField dataset to be filled.
+  *@param v  The value to assign missing records.
+  *@return A full DiscreteField dataset with every field populated.
+  */
 EXPORT DATASET(Types.DiscreteField)
       FatD(DATASET(Types.DiscreteField) d0,
            Types.t_Discrete v=0) := FUNCTION

@@ -1,5 +1,5 @@
 /**
- * Useful constants
+ * Useful constants used in ML.
  */
 EXPORT Constants := MODULE
   /**

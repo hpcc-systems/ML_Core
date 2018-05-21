@@ -1,12 +1,12 @@
 /**
- * Evaluate a polynomial from a set of co-effs. Co-effs 1 is
- * assumed to be the HIGH order of the equation.
- * Thus for ax^2+bx+c - the set would need to be Coef := [a,b,c];
- *@param x the value of x in the polynomial
- *@param Coeffs a set of coefficients forthe polynomial. The ALL
- *              set is considered to be all zero values
- *@return value of the polynomial at x
- */
+  * Evaluate a polynomial from a set of coefficients. <p>Coeffs 1 is
+  * assumed to be the HIGH order of the equation.
+  * <p>Thus for ax^2+bx+c - the set would need to be Coef := [a,b,c];
+  * @param x the value of x in the polynomial.
+  * @param Coeffs a set of coefficients for the polynomial. The ALL
+  *              set is considered to be all zero values.
+  * @return value of the polynomial at x.
+  **/
 EXPORT REAL8 Poly(REAL8 x, SET OF REAL8 Coeffs) := BEGINC++
   #option pure
   if (isAllCoeffs)
