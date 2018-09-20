@@ -123,15 +123,15 @@ EXPORT Analysis := MODULE
     EXPORT DATASET(Classification_Accuracy) Accuracy(DATASET(DiscreteField) predicted, DATASET(DiscreteField) actual) := FUNCTION
       // Returns Raw, PoD, PoDE
       cStats := ClassStats(actual);
-      numClasses := TABLE(cStats, {wi, classifier, num_classes := COUNT(GROUP)}, wi, classifier);
+      numClasses := TABLE(cStats, {wi, classifier, UNSIGNED4 num_classes := COUNT(GROUP)}, wi, classifier);
       mostCommon0 := SORT(cStats, wi, classifier, -classCount);
       mostCommon := DEDUP(mostCommon0, wi, classifier);
       globStats := JOIN(numClasses, mostCommon, LEFT.wi = RIGHT.wi AND LEFT.classifier = RIGHT.classifier,
-                        TRANSFORM({numClasses, UNSIGNED highestCnt},
+                        TRANSFORM({numClasses, UNSIGNED4 highestCnt},
                                   SELF.highestCnt := RIGHT.classCount,
                                   SELF := LEFT));
       cmp := CompareClasses(predicted, actual);
-      cmpStats := TABLE(cmp, {wi, number, UNSIGNED corrCnt := COUNT(GROUP, correct), totCnt := COUNT(GROUP)}, wi, number);
+      cmpStats := TABLE(cmp, {wi, number, UNSIGNED4 corrCnt := COUNT(GROUP, correct), UNSIGNED4 totCnt := COUNT(GROUP)}, wi, number);
       outStats := JOIN(cmpStats, globStats, LEFT.wi = RIGHT.wi AND LEFT.number = RIGHT.classifier,
                         TRANSFORM(Classification_Accuracy,
                                    SELF.classifier := LEFT.number,
@@ -170,12 +170,12 @@ EXPORT Analysis := MODULE
                                       SELF.class := RIGHT.value,
                                       SELF := LEFT), MANY, LOOKUP);
       allClassSumm := TABLE(allClassPts, {wi, number, class,
-                             UNSIGNED precDenom := COUNT(GROUP, pred = class),
-                             UNSIGNED TP := COUNT(GROUP, pred = class AND actual = class),
-                             UNSIGNED FP := COUNT(GROUP, pred = class AND actual != class),
-                             UNSIGNED recallDenom := COUNT(GROUP, actual = class),
-                             UNSIGNED TN := COUNT(GROUP, actual != class AND pred != class),
-                             UNSIGNED FN := COUNT(GROUP, actual = class AND pred != class),
+                             UNSIGNED4 precDenom := COUNT(GROUP, pred = class),
+                             UNSIGNED4 TP := COUNT(GROUP, pred = class AND actual = class),
+                             UNSIGNED4 FP := COUNT(GROUP, pred = class AND actual != class),
+                             UNSIGNED4 recallDenom := COUNT(GROUP, actual = class),
+                             UNSIGNED4 TN := COUNT(GROUP, actual != class AND pred != class),
+                             UNSIGNED4 FN := COUNT(GROUP, actual = class AND pred != class),
                              }, wi, number, class);
       cStats := PROJECT(allClassSumm, TRANSFORM(Class_Accuracy,
                                             SELF.classifier := LEFT.number,
@@ -194,6 +194,8 @@ EXPORT Analysis := MODULE
   EXPORT Regression := MODULE
     /**
       * Assess the overall accuracy of the regression predictions.
+      *
+      * <p>ML_Core.Types.Regression_Accuracy provides a detailed description of the return values. 
       *
       * @param predicted The predicted values for each id in DATASET(DiscreteField) format.
       * @param actual The actual (i.e. expected) values for each id in DATASET(DiscreteField) format.
