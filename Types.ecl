@@ -217,6 +217,8 @@ EXPORT Types := MODULE
     *           solution would be right 95% of the time.  If this classification had a
     *           raw accuracy of 97.5%, its PoDE would be .5 (i.e. half way between
     *           trivial solution and perfection).
+    * @field Hamming_Loss Hamming loss. The percentage of records misclassified.
+    *           Useful for multilabel classification.
     *
     */
   EXPORT Classification_Accuracy := RECORD
@@ -227,6 +229,7 @@ EXPORT Types := MODULE
     REAL Raw_Accuracy;
     REAL PoD;
     REAL PoDE;
+    REAL Hamming_Loss;
   END;
   /**
     * Class_Accuracy
