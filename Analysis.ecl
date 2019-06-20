@@ -182,6 +182,7 @@ EXPORT Analysis := MODULE
                                             SELF.precision := LEFT.TP / (LEFT.TP + LEFT.FP),
                                             SELF.recall := LEFT.TP / (LEFT.TP + LEFT.FN),
                                             SELF.FPR := LEFT.FP / (LEFT.FP + LEFT.TN),
+                                            SELF.f_score := 2 * (SELF.precision * SELF.recall) / (SELF.precision + SELF.recall),
                                             SELF := LEFT));
       RETURN cStats;
     END; // AccuracyByClass
