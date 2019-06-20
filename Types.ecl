@@ -251,6 +251,9 @@ EXPORT Types := MODULE
     *                  (i.e. False Positives / (False Positives + True Negatives))
     *                  What percentage of the items not in this class did we falsely
     *                  predict as this class?
+    * @field f_score The balanced F-score for this class
+    *                  (i.e. 2 * (precision * recall) / (precision + recall))
+    *                  The harmonic mean of precision and recall.
     *
     */
   EXPORT Class_Accuracy := RECORD
@@ -260,6 +263,7 @@ EXPORT Types := MODULE
     REAL precision;
     REAL recall;
     REAL FPR;
+    REAL f_score;
   END;
   /**
     * Regression_Accuracy
