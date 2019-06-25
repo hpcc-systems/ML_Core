@@ -283,6 +283,48 @@ EXPORT Types := MODULE
     t_FieldReal MSE;
     t_FieldReal RMSE;
   END;
+  /**
+    * Contingency_Table
+    *
+    * Contains the contingency table for every combination of feature and classifier.
+    * Result layout for Analysis.FeatureSelection.Contingency
+    * 
+    * @field wi Work item identifier
+    * @field fnumber The feature number
+    * @field snumber The sample number or the classifier number
+    * @field fclass The feature label / class
+    * @field sclass The sample (classifier) label / class
+    * @field cnt The number of samples with feature label fclass and classifier label sclass
+    *
+    */
+  EXPORT Contingency_Table := RECORD
+    t_Work_Item wi;
+    t_FieldNumber fnumber;
+    t_FieldNumber snumber;
+    t_Discrete fclass;
+    t_Discrete sclass;
+    t_Item cnt;
+  END;
+  /**
+    * Chi2_Result
+    *
+    * Result layout for Analysis.FeatureSelection.Chi2
+    * Contains chi2 value for every combination of feature and classifier per work item.
+    *
+    * @field wi Work item identifier
+    * @field fnumber Feature number
+    * @field snumber Sample number / number of classifier
+    * @field chi2 The chi2 value for this combination
+    * @field dof The number of degrees of freedom for this combination
+    *
+    */
+  EXPORT Chi2_Result := RECORD
+    t_Work_Item wi;
+    t_FieldNumber fnumber;
+    t_FieldNumber snumber;
+    t_FieldReal x2;
+    t_Item dof;
+  END;
   // End Analytic result structures
 
   // Data diagnostic definition

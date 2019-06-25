@@ -17,6 +17,8 @@ Classification_Accuracy := Types.Classification_Accuracy; // Return structure fo
                                                           // Classification.Accuracy
 Class_Accuracy := Types.Class_Accuracy; // Return structure for Classification.AccuracyByClass
 Regression_Accuracy := Types.Regression_Accuracy; // Return structure for Regression.Accuracy
+Contingency_Table := Types.Contingency_Table; // Return structure for FeatureSelection.Contingency
+Chi2_Result : Types.Chi2_Result; // Return structure for FeatureSelection.Chi2
 
 /**
   * Analyze and assess the effectiveness of a Machine
@@ -228,4 +230,118 @@ EXPORT Analysis := MODULE
       RETURN result;
     END; // Accuracy
   END; // Regression
+  EXPORT FeatureSelection := MODULE
+    /**
+      * Contingency
+      *
+      * Provides the contingency table for each combination of feature and classifier. The
+      * contingency table represents the number of samples present in the data for each
+      * combination of sample category and feature category. Can only be used when both
+      * classifier and feature are discrete.
+      *
+      * The sets provided need not be sample / feature sets. They can be any two discrete
+      * fields whose contingency table is needed.
+      *
+      * @param samples The samples or dependent values in DATASET(DiscreteField) format
+      * @param features The features or independent values in DATASET(DiscreteField) format
+      * @return DATASET(Contingency_Table) The contingency table for each combination of
+      *         classifier (sample) and feature, per work item
+      * @see ML_Core.Types.Contingency_Table
+      *
+      */
+    EXPORT DATASET(Contingency_Table) Contingency(DATASET(DiscreteField) samples, DATASET(DiscreteField) features) := FUNCTION
+      // To obtain the contingency tables, the samples and features are first combined into a 
+      // single table, with every feature mapped to every classifier
+      combined := JOIN(samples, features,
+                 LEFT.wi=RIGHT.wi and LEFT.id=RIGHT.id,
+                 TRANSFORM({t_Work_Item wi, t_RecordId id, t_FieldNumber fnumber,
+                            t_FieldNumber snumber, t_Discrete fclass, t_Discrete sclass},
+                           SELF.wi := LEFT.wi,
+                           SELF.id := LEFT.id,
+                           SELF.fnumber := RIGHT.number,
+                           SELF.snumber := LEFT.number,
+                           SELF.fclass := RIGHT.value,
+                           SELF.sclass := LEFT.value));
+      // This combined data is then grouped to obtain the contingency tables
+      result := TABLE(combined, {wi,fnumber,snumber,fclass,sclass,cnt:=COUNT(GROUP)},
+                                wi,fnumber,snumber,fclass,sclass);
+      RETURN result;
+    END; //Contingency
+    /**
+      * Chi2
+      *
+      * Provides Chi2 coefficient and number of degrees of freedom for each combination
+      * of feature and classifier.
+      *
+      * Chi squared test is a statistical measure that helps establish the dependence of
+      * two categorical variables. In machine learning, it can be used to determine whether
+      * a classifier is dependent on a certain feature, and thus helps in feature selection.
+      * This test can only be used when both variables are categorical.
+      *
+      * @param samples The samples or dependent values in DATASET(DiscreteField) format
+      * @param features The features or independent values in DATASET(DiscreteField) format
+      * @return DATASET(Chi2_Result) Chi square values and degrees of freedom for each
+      *         combination of feature and classifier, per work item.
+      * @see ML_Core.Types.Chi2_Result
+      *
+      */
+    EXPORT DATASET(Chi2_Result) Chi2(DATASET(DiscreteField) samples, DATASET(DiscreteField) features) := FUNCTION
+      // Sums of rows
+      featureSums := TABLE(ct, {wi,fnumber,snumber,fclass,cnt:=SUM(GROUP,cnt)},wi,fnumber,snumber,fclass);
+      // Sums of columns
+      sampleSums := TABLE(ct, {wi,fnumber,snumber,sclass,cnt:=SUM(GROUP,cnt)},wi,fnumber,snumber,sclass);
+      // Total sum
+      allSum := TABLE(ct, {wi,fnumber,snumber,cnt:=SUM(GROUP,cnt)},wi,fnumber,snumber);
+      // The expected contingency table from the above sums (1)
+      ex1 := JOIN(featureSums, sampleSums,
+                  LEFT.wi=RIGHT.wi and LEFT.fnumber=RIGHT.fnumber and LEFT.snumber=RIGHT.snumber,
+                  TRANSFORM({t_Work_Item wi, t_FieldNumber fnumber, t_FieldNumber snumber, 
+                             t_Discrete fclass, t_Discrete sclass, REAL8 value},
+                            SELF.wi := LEFT.wi,
+                            SELF.value := LEFT.cnt * RIGHT.cnt,
+                            SELF.fnumber := LEFT.fnumber,
+                            SELF.snumber := LEFT.snumber,
+                            SELF.fclass := LEFT.fclass,
+                            SELF.sclass := RIGHT.sclass));
+      // The expected contingency table from the above sums (2)
+      ex2 := JOIN(ex1, allSum,
+                  LEFT.wi=RIGHT.wi and LEFT.fnumber=RIGHT.fnumber and LEFT.snumber=RIGHT.snumber,
+                  TRANSFORM(RECORDOF(ex1),
+                            SELF.value := LEFT.value/RIGHT.cnt,
+                            SELF := LEFT));
+      // Degrees of freedom calculation dof = (ROWS - 1)*(COLS - 1)
+      // Number of rows
+      dof1 := TABLE(featureSums, {wi,fnumber,snumber,dof:=COUNT(GROUP)-1}, wi, fnumber,snumber);
+      // Number of cols
+      dof2 := TABLE(sampleSums, {wi,fnumber,snumber,dof:=COUNT(GROUP)-1}, wi, fnumber,snumber);
+      // DOF
+      dof3 := JOIN(dof1,dof2, 
+                   LEFT.wi=RIGHT.wi and
+                   LEFT.fnumber=RIGHT.fnumber and
+                   LEFT.snumber=RIGHT.snumber,
+                   TRANSFORM(RECORDOF(dof1),
+                             SELF.dof := LEFT.dof*RIGHT.dof,
+                             SELF := LEFT));
+      // Chi square calculation from expected and observed contingency tables.
+      // LEFT OUTER JOIN flag is used as the contingency table does not contain entries for
+      // combinations where no samples are available. The expected contingency table contains
+      // entries for all combinations of sample and feature classes, hence the OUTER condition
+      // is used to produce entries for all combinations of sample and feature classes.
+      chi2_1 := JOIN(ex2, ct,
+                     LEFT.wi=RIGHT.wi and
+                     LEFT.fnumber=RIGHT.fnumber and
+                     LEFT.snumber=RIGHT.snumber and
+                     LEFT.fclass=RIGHT.fclass and
+                     LEFT.sclass=RIGHT.sclass,
+                     TRANSFORM(RECORDOF(ex2),
+                               SELF.value := POWER(RIGHT.value-LEFT.value,2)/LEFT.value,
+                               SELF := LEFT), LEFT OUTER);
+      // Group by wi, fnumber, snumner
+      chi2_2 := TABLE(chi2_1, {wi,fnumber,snumber,x2:=SUM(GROUP,value)},wi,fnumber,snumber);
+      // Combine with calculated dof
+      result := JOIN(chi2_2, dof3, 
+                     LEFT.wi=RIGHT.wi and LEFT.fnumber=RIGHT.fnumber and LEFT.snumber=RIGHT.snumber);
+      RETURN result;
+    END; //Chi2
+  END; // FeatureSelection
 END; // Analysis
