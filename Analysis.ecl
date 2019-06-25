@@ -17,6 +17,8 @@ Classification_Accuracy := Types.Classification_Accuracy; // Return structure fo
                                                           // Classification.Accuracy
 Class_Accuracy := Types.Class_Accuracy; // Return structure for Classification.AccuracyByClass
 Regression_Accuracy := Types.Regression_Accuracy; // Return structure for Regression.Accuracy
+Contingency_Table := Types.Contingency_Table; // Return structure for FeatureSelection.Contingency
+Chi2_Result : Types.Chi2_Result; // Return structure for FeatureSelection.Chi2
 
 /**
   * Analyze and assess the effectiveness of a Machine
@@ -228,4 +230,41 @@ EXPORT Analysis := MODULE
       RETURN result;
     END; // Accuracy
   END; // Regression
+  EXPORT FeatureSelection := MODULE
+    /**
+      * Contingency
+      *
+      * Provides the contingency table for each combination of feature and classifier. The
+      * contingency table represents the number of samples present in the data for each
+      * combination of sample category and feature category. Can only be used when both
+      * classifier and feature are discrete.
+      *
+      * The sets provided need not be sample / feature sets. They can be any two discrete
+      * fields whose correlation / dependence is to be ascertained
+      *
+      * @param samples The samples or dependent values in DATASET(DiscreteField) format
+      * @param features The features or independent values in DATASET(DiscreteField) format
+      * @return DATASET(Contingency_Table) The contingency table for each combination of
+      *         classifier (sample) and feature, per work item
+      * @see ML_Core.Types.Contingency_Table
+      *
+      */
+    EXPORT DATASET(Contingency_Table) Contingency(DATASET(DiscreteField) samples, DATASET(DiscreteField) features) := FUNCTION
+      // To obtain the contingency tables, the samples and features are first combined into a 
+      // single table, with every feature mapped to every classifier
+      combined := JOIN(samples, features,
+                 LEFT.wi=RIGHT.wi and LEFT.id=RIGHT.id,
+                 TRANSFORM({t_Work_Item wi, t_RecordId id, t_FieldNumber fnumber,
+                            t_FieldNumber snumber, t_Discrete fclass, t_Discrete sclass},
+                           SELF.wi := LEFT.wi,
+                           SELF.id := LEFT.id,
+                           SELF.fnumber := RIGHT.number,
+                           SELF.snumber := LEFT.number,
+                           SELF.fclass := RIGHT.value,
+                           SELF.sclass := LEFT.value));
+      // This combined data is then grouped to obtain the contingency tables
+      RETURN TABLE(combined, {wi,fnumber,snumber,fclass,sclass,cnt:=COUNT(GROUP)},
+                              wi,fnumber,snumber,fclass,sclass);
+    END; //Contingency
+  END; // FeatureSelection
 END; // Analysis
