@@ -311,17 +311,17 @@ EXPORT Analysis := MODULE
                             SELF := LEFT));
       // Degrees of freedom calculation dof = (ROWS - 1)*(COLS - 1)
       // Number of rows
-      dof1 := TABLE(featureSums, {wi,fnumber,snumber,d:=COUNT(GROUP)-1}, wi, fnumber,snumber);
+      dof1 := TABLE(featureSums, {wi,fnumber,snumber,dof:=COUNT(GROUP)-1}, wi, fnumber,snumber);
       // Number of cols
-      dof2 := TABLE(sampleSums, {wi,fnumber,snumber,d:=COUNT(GROUP)-1}, wi, fnumber,snumber);
+      dof2 := TABLE(sampleSums, {wi,fnumber,snumber,dof:=COUNT(GROUP)-1}, wi, fnumber,snumber);
       // DOF
-      dof := JOIN(dof1,dof2, 
-                  LEFT.wi=RIGHT.wi and
-                  LEFT.fnumber=RIGHT.fnumber and
-                  LEFT.snumber=RIGHT.snumber,
-                  TRANSFORM(RECORDOF(dof1),
-                            SELF.d := LEFT.d*RIGHT.d,
-                            SELF := LEFT));
+      dof3 := JOIN(dof1,dof2, 
+                   LEFT.wi=RIGHT.wi and
+                   LEFT.fnumber=RIGHT.fnumber and
+                   LEFT.snumber=RIGHT.snumber,
+                   TRANSFORM(RECORDOF(dof1),
+                             SELF.dof := LEFT.dof*RIGHT.dof,
+                             SELF := LEFT));
       // Chi square calculation from expected and observed contingency tables.
       // LEFT OUTER JOIN flag is used as the contingency table does not contain entries for
       // combinations where no samples are available. The expected contingency table contains
@@ -339,7 +339,7 @@ EXPORT Analysis := MODULE
       // Group by wi, fnumber, snumner
       chi2_2 := TABLE(chi2_1, {wi,fnumber,snumber,x2:=SUM(GROUP,value)},wi,fnumber,snumber);
       // Combine with calculated dof
-      result := JOIN(chi2_2, dof, 
+      result := JOIN(chi2_2, dof3, 
                      LEFT.wi=RIGHT.wi and LEFT.fnumber=RIGHT.fnumber and LEFT.snumber=RIGHT.snumber);
       RETURN result;
     END; //Chi2
