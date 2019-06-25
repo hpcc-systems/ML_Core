@@ -18,7 +18,7 @@ Classification_Accuracy := Types.Classification_Accuracy; // Return structure fo
 Class_Accuracy := Types.Class_Accuracy; // Return structure for Classification.AccuracyByClass
 Regression_Accuracy := Types.Regression_Accuracy; // Return structure for Regression.Accuracy
 Contingency_Table := Types.Contingency_Table; // Return structure for FeatureSelection.Contingency
-Chi2_Result : Types.Chi2_Result; // Return structure for FeatureSelection.Chi2
+Chi2_Result := Types.Chi2_Result; // Return structure for FeatureSelection.Chi2
 
 /**
   * Analyze and assess the effectiveness of a Machine
@@ -286,19 +286,20 @@ EXPORT Analysis := MODULE
       *
       */
     EXPORT DATASET(Chi2_Result) Chi2(DATASET(DiscreteField) samples, DATASET(DiscreteField) features) := FUNCTION
+			ct := Contingency(samples, features);
       // Sums of rows
-      featureSums := TABLE(ct, {wi,fnumber,snumber,fclass,cnt:=SUM(GROUP,cnt)},wi,fnumber,snumber,fclass);
+      featureSums := TABLE(ct, {wi,fnumber,snumber,fclass,c:=SUM(GROUP,cnt)},wi,fnumber,snumber,fclass);
       // Sums of columns
-      sampleSums := TABLE(ct, {wi,fnumber,snumber,sclass,cnt:=SUM(GROUP,cnt)},wi,fnumber,snumber,sclass);
+      sampleSums := TABLE(ct, {wi,fnumber,snumber,sclass,c:=SUM(GROUP,cnt)},wi,fnumber,snumber,sclass);
       // Total sum
-      allSum := TABLE(ct, {wi,fnumber,snumber,cnt:=SUM(GROUP,cnt)},wi,fnumber,snumber);
+      allSum := TABLE(ct, {wi,fnumber,snumber,c:=SUM(GROUP,cnt)},wi,fnumber,snumber);
       // The expected contingency table from the above sums (1)
       ex1 := JOIN(featureSums, sampleSums,
                   LEFT.wi=RIGHT.wi and LEFT.fnumber=RIGHT.fnumber and LEFT.snumber=RIGHT.snumber,
                   TRANSFORM({t_Work_Item wi, t_FieldNumber fnumber, t_FieldNumber snumber, 
                              t_Discrete fclass, t_Discrete sclass, REAL8 value},
                             SELF.wi := LEFT.wi,
-                            SELF.value := LEFT.cnt * RIGHT.cnt,
+                            SELF.value := LEFT.c * RIGHT.c,
                             SELF.fnumber := LEFT.fnumber,
                             SELF.snumber := LEFT.snumber,
                             SELF.fclass := LEFT.fclass,
@@ -307,7 +308,7 @@ EXPORT Analysis := MODULE
       ex2 := JOIN(ex1, allSum,
                   LEFT.wi=RIGHT.wi and LEFT.fnumber=RIGHT.fnumber and LEFT.snumber=RIGHT.snumber,
                   TRANSFORM(RECORDOF(ex1),
-                            SELF.value := LEFT.value/RIGHT.cnt,
+                            SELF.value := LEFT.value/RIGHT.c,
                             SELF := LEFT));
       // Degrees of freedom calculation dof = (ROWS - 1)*(COLS - 1)
       // Number of rows
@@ -334,7 +335,7 @@ EXPORT Analysis := MODULE
                      LEFT.fclass=RIGHT.fclass and
                      LEFT.sclass=RIGHT.sclass,
                      TRANSFORM(RECORDOF(ex2),
-                               SELF.value := POWER(RIGHT.value-LEFT.value,2)/LEFT.value,
+                               SELF.value := POWER(RIGHT.cnt-LEFT.value,2)/LEFT.value,
                                SELF := LEFT), LEFT OUTER);
       // Group by wi, fnumber, snumner
       chi2_2 := TABLE(chi2_1, {wi,fnumber,snumber,x2:=SUM(GROUP,value)},wi,fnumber,snumber);
