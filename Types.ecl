@@ -322,7 +322,7 @@ EXPORT Types := MODULE
     t_Work_Item wi;
     t_FieldNumber fnumber;
     t_FieldNumber snumber;
-    t_FieldReal chi2;
+    t_FieldReal x2;
     t_Item dof;
   END;
   // End Analytic result structures
