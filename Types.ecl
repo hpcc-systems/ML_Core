@@ -303,7 +303,7 @@ EXPORT Types := MODULE
     t_FieldNumber snumber;
     t_Discrete fclass;
     t_Discrete sclass;
-    t_Item cnt;
+    INTEGER cnt := COUNT(GROUP);
   END;
   /**
     * Chi2_Result
@@ -323,7 +323,7 @@ EXPORT Types := MODULE
     t_FieldNumber fnumber;
     t_FieldNumber snumber;
     t_FieldReal x2;
-    t_Item dof;
+    INTEGER dof;
   END;
   // End Analytic result structures
 
@@ -356,3 +356,4 @@ EXPORT Types := MODULE
     STRING line;
   END;
 END;
+
