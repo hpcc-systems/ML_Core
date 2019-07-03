@@ -285,7 +285,7 @@ EXPORT Analysis := MODULE
       * @see ML_Core.Types.Chi2_Result
       *
       */
-    EXPORT DATASET(Chi2_Result) Chi2(DATASET(DiscreteField) samples, DATASET(DiscreteField) features) := FUNCTION
+    EXPORT DATASET(Chi2_Result) Chi2(DATASET(DiscreteField) features, DATASET(DiscreteField) samples) := FUNCTION
 			ct := Contingency(samples, features);
       // Sums of rows
       featureSums := TABLE(ct, {wi,fnumber,snumber,fclass,c:=SUM(GROUP,cnt)},wi,fnumber,snumber,fclass);
