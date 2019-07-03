@@ -495,7 +495,19 @@ EXPORT Analysis := MODULE
                                  SELF.value := (RIGHT.value-LEFT.value)/MAX(RIGHT.value,LEFT.value)));
       // Remove unnecessary fields
       sampleCoeffs2 := TABLE(sampleCoeffs,{wi,id,value});
-      RETURN sampleCoeffs2;
+      // Find single clusters
+      singleClusters := TABLE(points,{wi, label, cnt:=COUNT(GROUP)}, wi,label)(cnt=1);
+      // Silhouette coefficients for these clusters = 1
+      singleCoeffs := JOIN(points, singleClusters,
+                           LEFT.wi=RIGHT.wi and
+                           LEFT.label=RIGHT.label,
+                           TRANSFORM({t_Work_Item wi, t_RecordId id, t_FieldReal value},
+                                      SELF.wi := LEFT.wi,
+                                      SELF.id := LEFT.id,
+                                      SELF.value := 1));
+      // Combine all scores
+      result := MERGE([sampleCoeffs2, singleCoeffs], SORTED(wi,id,value)); 
+      RETURN result;
     END; // SampleSilhouetteScore
     /**
       * SilhouetteScore
