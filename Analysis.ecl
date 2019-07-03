@@ -144,6 +144,7 @@ EXPORT Analysis := MODULE
                                                   (LEFT.totCnt - LEFT.totCnt / RIGHT.num_classes),
                                    SELF.PoDE := (LEFT.corrCnt - RIGHT.highestCnt) /
                                                   (LEFT.totCnt - RIGHT.highestCnt),
+                                   SELF.Hamming_Loss := SELF.errCnt / LEFT.totCnt,
                                    SELF := LEFT), LOOKUP);
       RETURN outStats;
     END; // Accuracy
