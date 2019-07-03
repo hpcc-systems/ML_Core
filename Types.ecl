@@ -332,8 +332,72 @@ EXPORT Types := MODULE
     t_FieldReal x2;
     INTEGER dof;
   END;
+  /**
+    * ARI_Result
+    *
+    * Result layout for Analysis.Clustering.ARI
+    *
+    * Contains the Adusted Rand Index for each work item.
+    *
+    * @field wi Work item identifier
+    * @field value The ARI for the model
+    *
+    */
+  EXPORT ARI_Result := RECORD
+    t_Work_Item wi;
+    t_FieldReal value;
+  END;
+  /**
+    * SampleSilhouette_Result
+    *
+    * Result layout for Analysis.Clustering.SampleSilhouetteScore
+    * 
+    * Contains the silhouette score for each sample datapoint.
+    *
+    * @field wi Work item identifier
+    * @field id Sample datapoint identifier
+    * @field value Silhouette score
+    *
+    */
+  EXPORT SampleSilhouette_Result := RECORD
+    t_Work_Item wi;
+    t_RecordID id;
+    t_FieldReal value;
+  END;
+  /**
+    * Silhouette_Result
+    *
+    * Result layout for Analysis.Clustering.SilhouetteScore
+    * 
+    * Contains the silhouette score for each work item.
+    *
+    * @field wi Work item identifier
+    * @field score Silhouette score
+    *
+    */
+  EXPORT Silhouette_Result := RECORD
+    t_Work_Item wi;
+    t_FieldReal score;
+  END;
   // End Analytic result structures
-
+  
+  // Clustering structures required by cluster analysis methods (See Analysis.ecl)
+  /**
+    * ClusterLabels format defines the distance space where
+    * each cluster defined by a center and its closest samples.
+    * It is the same as KMeans.Types.KMeans_Model.Labels.
+    *
+    * @field  wi      The model identifier.
+    * @field  id      The sample identifier.
+    * @field  label   The identifier of the closest center to the sample.
+    */
+  EXPORT ClusterLabels := RECORD
+    t_Work_Item wi;      // Model Identifier
+    t_RecordID  id;      // Sample Identifier
+    t_RecordID  label;   // Center Identifier
+  END;
+  // End Clustering structures
+  
   // Data diagnostic definition
   EXPORT Data_Diagnostic := RECORD
     t_work_item wi;
