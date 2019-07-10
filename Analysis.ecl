@@ -23,6 +23,8 @@ ClusterLabels := Types.ClusterLabels; // Parameter structure for Clustering.ARI
 ARI_Result := Types.ARI_Result; // Return structure for Clustering.ARI
 SampleSilhouette_Result := Types.SampleSilhouette_Result; // Return structure for Clustering.SampleSilhouetteScore
 Silhouette_Result := Types.Silhouette_Result; // Return structure for Clustering.SilhouetteScore
+AUC_Result := Types.AUC_Result; // Return structure for Classification.AUC
+Classification_Scores := Types.Classification_Scores;
 
 /**
   * Analyze and assess the effectiveness of a Machine
@@ -193,6 +195,69 @@ EXPORT Analysis := MODULE
                                             SELF := LEFT));
       RETURN cStats;
     END; // AccuracyByClass
+    /**
+      * AUC
+      * 
+      * Area under the Receiver Operating Characteristics (ROC) curve, is a measure of
+      * how well a classifier is able to distinguish between classes. The ROC curve is
+      * a plot of the true positive rate vs. the false positive rate with varying threshold
+      * values.
+      *
+      * The value of this metric ranges from 0 to 1. Higher values are an indication of better
+      * classifiers.
+      *
+      * @param scores The probablity or confidence per class that a sample belongs to that class in
+      *               DATASET(Classification_Scores) format
+      * @param actual The actual class to which a sample belongs in DATASET(DiscreteField) format
+      * @return DATASET(AUC_Result) The AUC score, per class, per classifier, per work item
+      * @see ML_Core.Types.AUC_Result, ML_Core.Types.Classification_Score
+      *
+      **/
+    EXPORT DATASET(AUC_Result) AUC(DATASET(Classification_Scores) scores, DATASET(DiscreteField) actual) := FUNCTION
+      // Create a set of all classes (per classifier, per work item)
+      classes := TABLE(actual, {wi, number, value}, wi, number, value);
+      // Combine the actual labels and their probabilities
+      // The actual labels are joined with a set of all classes, where each sample is matched with all classes
+      // in which the selected label is marked isTrue, and the probabilities are obtained from scores. When a
+      // score is not available, its probability is taken as 0.
+      combined := JOIN(actual, classes,
+                       LEFT.wi = RIGHT.wi and
+                       LEFT.number = RIGHT.number,
+                       TRANSFORM({RECORDOF(scores), BOOLEAN isTrue},
+                                 SELF.wi := LEFT.wi,
+                                 SELF.id := LEFT.id,
+                                 SELF.classifier := LEFT.number,
+                                 SELF.class := RIGHT.value,
+                                 SELF.prob := IF(EXISTS(scores(wi=SELF.wi and
+                                                               id=SELF.id and
+                                                               classifier=SELF.classifier and
+                                                               class=SELF.class)),
+                                                 scores(wi=SELF.wi and
+                                                        id=SELF.id and
+                                                        classifier=SELF.classifier and
+                                                        class=SELF.class)[1].prob,
+                                                 0),
+                                 SELF.isTrue := IF(LEFT.value=RIGHT.value, TRUE, FALSE)));
+      // Dataset of all pairs of positive and negative points per, class, per classifier, per work item.
+      // Only positive samples are taken from the left set and negative samples are taken from the right.
+      // If the score of the left sample is greater than the right sample, it is considered correct
+      // and hence marked 1. If the left score is smaller than that of the right, it is considered
+      // incorrect and marked 0. It they are equal, it is marked 0.5.
+      pairs := JOIN(combined, combined,
+                    LEFT.wi=RIGHT.wi and
+                    LEFT.classifier=RIGHT.classifier and
+                    LEFT.class=RIGHT.class and
+                    LEFT.isTrue = TRUE and
+                    RIGHT.isTrue = FALSE,
+                    TRANSFORM({t_Work_Item wi, t_FieldNumber classifier, t_Discrete class, REAL value},
+                              SELF.wi := LEFT.wi,
+                              SELF.classifier := LEFT.classifier,
+                              SELF.class := LEFT.class,
+                              SELF.value := IF(LEFT.prob = RIGHT.prob, 0.5, IF(LEFT.prob > RIGHT.prob, 1, 0))));
+      // The average of these marked scores gives the probability that a random positive sample is scored
+      // higher than a random negative sample which is equal to AUC
+      RETURN TABLE(pairs,{wi,classifier,class,auc:=AVE(GROUP,value)},wi,classifier,class);
+    END; // AUC
   END; // Classification
   /**
     * This sub-module provides functions for analyzing and assessing the effectiveness of
@@ -290,7 +355,7 @@ EXPORT Analysis := MODULE
       *         combination of feature and classifier, per work item.
       * @see ML_Core.Types.Chi2_Result
       *
-      */
+      **/
     EXPORT DATASET(Chi2_Result) Chi2(DATASET(DiscreteField) features, DATASET(DiscreteField) samples) := FUNCTION
 			ct := Contingency(samples, features);
       // Sums of rows
@@ -367,7 +432,7 @@ EXPORT Analysis := MODULE
       * @return DATASET(ARI_Result) The adjusted rand index per work item
       * @see ML_Core.Types.ClusterLabels, ML_Core.Types.ARI_Result
       *
-      */
+      **/
     EXPORT DATASET(ARI_Result) ARI(DATASET(ClusterLabels) predicted, DATASET(ClusterLabels) actual) := FUNCTION
       // Convert input parameter to DiscreteField to use as input for contingency
       conv1 := PROJECT(predicted, TRANSFORM(Types.DiscreteField,
