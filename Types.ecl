@@ -269,6 +269,25 @@ EXPORT Types := MODULE
     REAL f_score;
   END;
   /**
+    * AUC_Result
+    *
+    * Result layout for Analysis.Classification.AUC
+    *
+    * @field wi Work item identifier
+    * @field classifier The field number associated with this dependent variable, for
+    *                   multi-variate.  Otherwise 1.
+    * @field class The class to which the analytics apply.
+    * @field AUC The value of the Area Under the Receiver Operating Characteristic curve
+    *            for this class. This value ranges between 0 and 1. A higher value is an
+    *            indication of a better classifier.
+    */
+  EXPORT AUC_Result := RECORD
+    t_Work_Item wi;
+    t_FieldNumber classifier;
+    t_Discrete class;
+    t_FieldReal AUC;
+  END;
+  /**
     * Regression_Accuracy
     *
     * Results layout for Analysis.Regression.Accuracy
@@ -302,6 +321,7 @@ EXPORT Types := MODULE
     * @field fclass The feature label / class
     * @field sclass The sample (classifier) label / class
     * @field cnt The number of samples with feature label fclass and classifier label sclass
+    *            Does not contain entries for combinations with no members.
     *
     */
   EXPORT Contingency_Table := RECORD
@@ -425,6 +445,27 @@ EXPORT Types := MODULE
     */
   EXPORT LUCI_Rec := RECORD
     STRING line;
+  END;
+  /**
+    * Classification_Scores
+    *
+    * The probability or confidence, per class, that a sample belongs to that class.
+    *
+    * @field wi The work-item identifier.
+    * @field id The record-id of the sample.
+    * @field classifier The field number associated with this dependent variable, for
+    *                   multi-variate. Otherwise 1.
+    * @field class The class label.
+    * @field prob The percentage of trees that assigned this class label,
+    *             which is a rough stand-in for the probability that the label
+    *             is correct.
+    */
+  EXPORT Classification_Scores := RECORD
+    t_Work_Item wi;
+    t_RecordID id;
+    t_FieldNumber classifier;
+    t_Discrete class;
+    t_FieldReal prob;
   END;
 END;
 
