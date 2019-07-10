@@ -19,6 +19,12 @@ Class_Accuracy := Types.Class_Accuracy; // Return structure for Classification.A
 Regression_Accuracy := Types.Regression_Accuracy; // Return structure for Regression.Accuracy
 Contingency_Table := Types.Contingency_Table; // Return structure for FeatureSelection.Contingency
 Chi2_Result := Types.Chi2_Result; // Return structure for FeatureSelection.Chi2
+ClusterLabels := Types.ClusterLabels; // Parameter structure for Clustering.ARI
+ARI_Result := Types.ARI_Result; // Return structure for Clustering.ARI
+SampleSilhouette_Result := Types.SampleSilhouette_Result; // Return structure for Clustering.SampleSilhouetteScore
+Silhouette_Result := Types.Silhouette_Result; // Return structure for Clustering.SilhouetteScore
+AUC_Result := Types.AUC_Result; // Return structure for Classification.AUC
+Classification_Scores := Types.Classification_Scores;
 
 /**
   * Analyze and assess the effectiveness of a Machine
@@ -189,6 +195,69 @@ EXPORT Analysis := MODULE
                                             SELF := LEFT));
       RETURN cStats;
     END; // AccuracyByClass
+    /**
+      * AUC
+      * 
+      * Area under the Receiver Operating Characteristics (ROC) curve, is a measure of
+      * how well a classifier is able to distinguish between classes. The ROC curve is
+      * a plot of the true positive rate vs. the false positive rate with varying threshold
+      * values.
+      *
+      * The value of this metric ranges from 0 to 1. Higher values are an indication of better
+      * classifiers.
+      *
+      * @param scores The probablity or confidence per class that a sample belongs to that class in
+      *               DATASET(Classification_Scores) format
+      * @param actual The actual class to which a sample belongs in DATASET(DiscreteField) format
+      * @return DATASET(AUC_Result) The AUC score, per class, per classifier, per work item
+      * @see ML_Core.Types.AUC_Result, ML_Core.Types.Classification_Score
+      *
+      **/
+    EXPORT DATASET(AUC_Result) AUC(DATASET(Classification_Scores) scores, DATASET(DiscreteField) actual) := FUNCTION
+      // Create a set of all classes (per classifier, per work item)
+      classes := TABLE(actual, {wi, number, value}, wi, number, value);
+      // Combine the actual labels and their probabilities
+      // The actual labels are joined with a set of all classes, where each sample is matched with all classes
+      // in which the selected label is marked isTrue, and the probabilities are obtained from scores. When a
+      // score is not available, its probability is taken as 0.
+      combined := JOIN(actual, classes,
+                       LEFT.wi = RIGHT.wi and
+                       LEFT.number = RIGHT.number,
+                       TRANSFORM({RECORDOF(scores), BOOLEAN isTrue},
+                                 SELF.wi := LEFT.wi,
+                                 SELF.id := LEFT.id,
+                                 SELF.classifier := LEFT.number,
+                                 SELF.class := RIGHT.value,
+                                 SELF.prob := IF(EXISTS(scores(wi=SELF.wi and
+                                                               id=SELF.id and
+                                                               classifier=SELF.classifier and
+                                                               class=SELF.class)),
+                                                 scores(wi=SELF.wi and
+                                                        id=SELF.id and
+                                                        classifier=SELF.classifier and
+                                                        class=SELF.class)[1].prob,
+                                                 0),
+                                 SELF.isTrue := IF(LEFT.value=RIGHT.value, TRUE, FALSE)));
+      // Dataset of all pairs of positive and negative points per, class, per classifier, per work item.
+      // Only positive samples are taken from the left set and negative samples are taken from the right.
+      // If the score of the left sample is greater than the right sample, it is considered correct
+      // and hence marked 1. If the left score is smaller than that of the right, it is considered
+      // incorrect and marked 0. It they are equal, it is marked 0.5.
+      pairs := JOIN(combined, combined,
+                    LEFT.wi=RIGHT.wi and
+                    LEFT.classifier=RIGHT.classifier and
+                    LEFT.class=RIGHT.class and
+                    LEFT.isTrue = TRUE and
+                    RIGHT.isTrue = FALSE,
+                    TRANSFORM({t_Work_Item wi, t_FieldNumber classifier, t_Discrete class, REAL value},
+                              SELF.wi := LEFT.wi,
+                              SELF.classifier := LEFT.classifier,
+                              SELF.class := LEFT.class,
+                              SELF.value := IF(LEFT.prob = RIGHT.prob, 0.5, IF(LEFT.prob > RIGHT.prob, 1, 0))));
+      // The average of these marked scores gives the probability that a random positive sample is scored
+      // higher than a random negative sample which is equal to AUC
+      RETURN TABLE(pairs,{wi,classifier,class,auc:=AVE(GROUP,value)},wi,classifier,class);
+    END; // AUC
   END; // Classification
   /**
     * This sub-module provides functions for analyzing and assessing the effectiveness of
@@ -286,7 +355,7 @@ EXPORT Analysis := MODULE
       *         combination of feature and classifier, per work item.
       * @see ML_Core.Types.Chi2_Result
       *
-      */
+      **/
     EXPORT DATASET(Chi2_Result) Chi2(DATASET(DiscreteField) features, DATASET(DiscreteField) samples) := FUNCTION
 			ct := Contingency(samples, features);
       // Sums of rows
@@ -347,4 +416,185 @@ EXPORT Analysis := MODULE
       RETURN result;
     END; //Chi2
   END; // FeatureSelection
+	EXPORT Clustering := MODULE
+    /**
+      * ARI
+      *
+      * The Rand index is a measure of the similarity between 
+      * two data clusterings. Adjusted Rand Index (ARI) is a
+      * version of rand index which is corrected for chance.
+      * Assumes values between -1 and 1. Gives near zero values
+      * for random clusterings, values close to 1 for good clusterings
+      * and values close to -1 for clusterings that are worse than random guesses.
+      *
+      * @param predicted The labels predicted by the model in DATASET(ClusteringLabels) Format
+      * @param actual The actual labels, or the 'Ground Truth' in DATASET(ClusteringLabels) Format
+      * @return DATASET(ARI_Result) The adjusted rand index per work item
+      * @see ML_Core.Types.ClusterLabels, ML_Core.Types.ARI_Result
+      *
+      **/
+    EXPORT DATASET(ARI_Result) ARI(DATASET(ClusterLabels) predicted, DATASET(ClusterLabels) actual) := FUNCTION
+      // Convert input parameter to DiscreteField to use as input for contingency
+      conv1 := PROJECT(predicted, TRANSFORM(Types.DiscreteField,
+                                            SELF.wi := LEFT.wi,
+                                            SELF.number := 1,
+                                            SELF.id := LEFT.id,
+                                            SELF.value := LEFT.label));
+
+      conv2 := PROJECT(actual, TRANSFORM(Types.DiscreteField,
+                                         SELF.wi := LEFT.wi,
+                                         SELF.number := 1,
+                                         SELF.id := LEFT.id,
+                                         SELF.value := LEFT.label));
+      // Get contingency table
+      ct := FeatureSelection.contingency(conv1, conv2);
+      // Produce the sums required for computation of ARI
+      // Row sums choose 2 (Number of pair combinations i.e nC2)
+      rowSumsC2 := TABLE(ct, {wi, fclass, c:=SUM(GROUP,cnt)*(SUM(GROUP,cnt)-1)/2}, wi, fclass);
+      // Column sums choose 2
+      colSumsC2 := TABLE(ct, {wi, sclass, c:=SUM(GROUP,cnt)*(SUM(GROUP,cnt)-1)/2}, wi, sclass);
+      // Total sum choose 2
+      allSumC2 := TABLE(ct, {wi, REAL8 value:=SUM(GROUP,cnt)*(SUM(GROUP,cnt)-1)/2}, wi);
+      // Sum of obtained row sums
+      a := TABLE(rowSumsC2, {wi, REAL8 value:=SUM(GROUP,c)}, wi);
+      // Sum of obtained column sums
+      b := TABLE(colSumsC2, {wi, REAL8 value:=SUM(GROUP,c)}, wi);
+      // Convert all items 'n' of contingency table to 'nC2'
+      ct1 := PROJECT(ct, TRANSFORM(RECORDOF(ct),
+                                   SELF.cnt := LEFT.cnt*(LEFT.cnt-1)/2,
+                                   SELF := LEFT));
+      // Sums of combinations of diagonal elements, obtained from above
+      nij := TABLE(ct1(fclass=sclass), {wi, REAL8 value:=SUM(GROUP,cnt)}, wi);
+      // Compute ARI using information obtained
+      ari := JOIN([a,b,nij,allSumC2],
+                  LEFT.wi = RIGHT.wi,
+                  TRANSFORM({t_Work_Item wi, INTEGER a, INTEGER b,
+                             INTEGER nij, INTEGER n, t_FieldReal value},
+                            SELF.wi := LEFT.wi,
+                            SELF.a := ROWS(LEFT)[1].value,
+                            SELF.b := ROWS(LEFT)[2].value,
+                            SELF.nij := ROWS(LEFT)[3].value,
+                            SELF.n := ROWS(LEFT)[4].value,
+                            SELF.value := (SELF.nij - SELF.a*SELF.b/SELF.n)/
+                                          (0.5*(SELF.a + SELF.b) - SELF.a*SELF.b/SELF.n)),SORTED(wi));
+      // Remove unnecessary fields
+      ari1 := TABLE(ari,{wi,value});
+      RETURN ari1;
+    END; // ARI
+    /**
+      * SampleSilhouetteScore
+      *
+      * Silhouette analysis measures the closeness of a point, both with its assigned cluster
+      * and with other clusters. It provides an easy way of finding the optimum value for
+      * k during k-means clustering. Silhouette values lie in the range of (-1, 1). A value of +1
+      * indicates that the sample point is far away from its neighboring cluster and very
+      * close to the cluster to which it is assigned.
+      *
+      * @param samples The datapoints / independent data in DATASET(NumericField) format
+      * @param labels The labels assigned to these datapoints in DATASET(ClusterLabels) format
+      * @result DATASET(SampleSilhouette_Result) The silhouette coefficient per sample, per work item
+      * @see ML_Core.Types.SampleSilhouette_Result
+      *
+      */
+    EXPORT DATASET(SampleSilhouette_Result) SampleSilhouetteScore(DATASET(NumericField) samples, DATASET(ClusterLabels) labels) := FUNCTION
+      // Combine labels and samples
+      points := JOIN(samples, labels,LEFT.wi = RIGHT.wi and LEFT.id = RIGHT.id);
+      // Finding a values
+      // Create all pairs of points with same cluster
+      // ( Also calculate squared distance between their individual features as a
+      //   step to calculate the distance between them )
+      a1 := JOIN(points,points,
+             LEFT.wi=RIGHT.wi and
+             LEFT.number=RIGHT.number and
+             LEFT.id <> RIGHT.id and
+             LEFT.label=RIGHT.label,
+             TRANSFORM({INTEGER wi, INTEGER id1, INTEGER id2,
+                        INTEGER number, INTEGER label, REAL8 sq_diff},
+                       SELF.wi := LEFT.wi,
+                       SELF.id1 := LEFT.id,
+                       SELF.id2 := RIGHT.id,
+                       SELF.number := LEFT.number,
+                       SELF.label := LEFT.label,
+                       SELF.sq_diff := POWER(LEFT.value-RIGHT.value,2)));
+      // Find distance between these points
+      a2 := TABLE(a1, {wi,id1,id2,label,dist:=SQRT(SUM(GROUP,sq_diff))},wi,id1,id2,label);
+      // Find average to find average distance for each point
+      a3 := TABLE(a2, {wi, id:=id1, label,value:=AVE(GROUP,dist)}, wi,id1,label);
+      // Finding b values
+      // Form all pairs of points from different clusters
+      // (Also calculate the squared difference between individual features)
+      b1 := JOIN(points,points,
+             LEFT.wi=RIGHT.wi and
+             LEFT.number=RIGHT.number and
+             LEFT.id <> RIGHT.id and
+             LEFT.label <> RIGHT.label,
+             TRANSFORM({t_Work_Item wi, t_RecordId id1, t_RecordId id2, t_RecordId Llabel,
+                        t_RecordId number, t_RecordId Rlabel, t_FieldReal sq_diff},
+                       SELF.wi := LEFT.wi,
+                       SELF.id1 := LEFT.id,
+                       SELF.id2 := RIGHT.id,
+                       SELF.number := LEFT.number,
+                       SELF.Llabel := LEFT.label,
+                       SELF.Rlabel := RIGHT.label,
+                       SELF.sq_diff := POWER(LEFT.value-RIGHT.value,2)));
+      // Find distance between these pairs
+      b2 := TABLE(b1,
+              {wi,id1,id2,Llabel,Rlabel,dist:=SQRT(SUM(GROUP,sq_diff))},
+              wi,id1,id2,Llabel,Rlabel);
+      // Average these to find average distance of each point from every cluster
+      b3 := TABLE(b2,
+              {wi,id:=id1,Llabel,Rlabel,avgDist:=AVE(GROUP,dist)},
+              wi,id1,Llabel,Rlabel);
+      // Find minimum to get the minimum average distance to another cluster
+      // for each point, which is the b value
+      b4 := TABLE(b3,
+              {wi,id,label:=Llabel,value:=MIN(GROUP,avgDist)},
+              wi,id,Llabel);
+      // The Silhouette coefficient / score for each sample datapoint
+      sampleCoeffs := JOIN(a3,b4,
+                       LEFT.id=RIGHT.id and LEFT.wi=RIGHT.wi,
+                       TRANSFORM({t_Work_Item wi, t_RecordId id, t_RecordId label, t_FieldReal value},
+                                 SELF.wi := LEFT.wi,
+                                 SELF.id := LEFT.id,
+                                 SELF.label := LEFT.label,
+                                 SELF.value := (RIGHT.value-LEFT.value)/MAX(RIGHT.value,LEFT.value)));
+      // Remove unnecessary fields
+      sampleCoeffs2 := TABLE(sampleCoeffs,{wi,id,value});
+      // Find single clusters
+      singleClusters := TABLE(points,{wi, label, cnt:=COUNT(GROUP)}, wi,label)(cnt=1);
+      // Silhouette coefficients for these clusters = 1
+      singleCoeffs := JOIN(points, singleClusters,
+                           LEFT.wi=RIGHT.wi and
+                           LEFT.label=RIGHT.label,
+                           TRANSFORM({t_Work_Item wi, t_RecordId id, t_FieldReal value},
+                                      SELF.wi := LEFT.wi,
+                                      SELF.id := LEFT.id,
+                                      SELF.value := 1));
+      // Combine all scores
+      result := MERGE([sampleCoeffs2, singleCoeffs], SORTED(wi,id,value)); 
+      RETURN result;
+    END; // SampleSilhouetteScore
+    /**
+      * SilhouetteScore
+      *
+      * Silhouette analysis measures the closeness of a point, both with its assigned cluster
+      * and with other clusters. It provides an easy way of finding the optimum value for
+      * k during k-means clustering. Silhouette values lie in the range of (-1, 1). A value of +1
+      * indicates that the sample point is far away from its neighboring cluster and very
+      * close to the cluster to which it is assigned.
+      *
+      * This function produces an average over SampleSilhouetteScore
+      *
+      * @param samples The datapoints / independent data in DATASET(NumericField) format
+      * @param labels The labels assigned to these datapoints in DATASET(ClusterLabels) format
+      * @result DATASET(Silhouette_Result) The silhouette coefficient per work item
+      * @see ML_Core.Types.SampleSilhouette_Result, ML_Core.Analysis.SampleSilhouetteScore
+      *
+      */
+    EXPORT DATASET(Silhouette_Result) SilhouetteScore(DATASET(NumericField) samples, DATASET(ClusterLabels) labels) := FUNCTION
+      sampleCoeffs := SampleSilhouetteScore(samples,labels);
+      totalCoeffs := TABLE(sampleCoeffs, {wi,score:=AVE(GROUP,value)}, wi);
+      RETURN totalCoeffs;
+    END; // SilhouetteScore
+  END; // Clustering
 END; // Analysis
