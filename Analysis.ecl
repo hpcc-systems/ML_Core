@@ -464,7 +464,30 @@ EXPORT Analysis := MODULE
                                    SELF.cnt := LEFT.cnt*(LEFT.cnt-1)/2,
                                    SELF := LEFT));
       // Sums of combinations of diagonal elements, obtained from above
-      nij := TABLE(ct1(fclass=sclass), {wi, REAL8 value:=SUM(GROUP,cnt)}, wi);
+      nij := TABLE(ct1, {wi, REAL8 value:=SUM(GROUP,cnt)}, wi);
+      // Check for trivial cases for each work item
+      n_samples := TABLE(ct, {wi, INTEGER value:=SUM(GROUP,cnt)});
+      n_classes0 := TABLE(actual, {wi, label}, wi, label);
+      n_classes := TABLE(n_classes0, {wi, INTEGER value:=COUNT(GROUP)}, wi);
+      n_clusters0 := TABLE(predicted, {wi, label}, wi, label);
+      n_clusters := TABLE(n_clusters0, {wi, INTEGER value:=COUNT(GROUP)}, wi);
+      // Criterion for checking --
+      // n_classess = n_clusters = 1 or
+      // n_classess = n_clusters = 0 or
+      // n_classess = n_clusters = n_samples
+      isTrivial := JOIN(n_classes, n_clusters,
+                        LEFT.wi = RIGHT.wi,
+                        TRANSFORM({t_Work_Item wi, INTEGER a, INTEGER b,
+                                   INTEGER c, BOOLEAN value},
+                                  SELF.wi := LEFT.wi,
+                                  SELF.a := n_samples(wi = SELF.wi)[1].value,
+                                  SELF.b := LEFT.value,
+                                  SELF.c := RIGHT.value,
+                                  SELF.value := IF(((SELF.b = SELF.c AND
+                                                    (SELF.b = 1 OR SELF.b = 0)) OR
+                                                   (SELF.b = SELF.c AND
+                                                    SELF.c = SELF.a)),
+                                                   TRUE, FALSE)));
       // Compute ARI using information obtained
       ari := JOIN([a,b,nij,allSumC2],
                   LEFT.wi = RIGHT.wi,
@@ -475,8 +498,10 @@ EXPORT Analysis := MODULE
                             SELF.b := ROWS(LEFT)[2].value,
                             SELF.nij := ROWS(LEFT)[3].value,
                             SELF.n := ROWS(LEFT)[4].value,
-                            SELF.value := (SELF.nij - SELF.a*SELF.b/SELF.n)/
-                                          (0.5*(SELF.a + SELF.b) - SELF.a*SELF.b/SELF.n)),SORTED(wi));
+                            SELF.value := IF(isTrivial(wi = SELF.wi)[1].value, 1,
+                                             (SELF.nij - SELF.a*SELF.b/SELF.n)/
+                                             (0.5*(SELF.a + SELF.b) - SELF.a*SELF.b/SELF.n))),
+                  SORTED(wi));
       // Remove unnecessary fields
       ari1 := TABLE(ari,{wi,value});
       RETURN ari1;
