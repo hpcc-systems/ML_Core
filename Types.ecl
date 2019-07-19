@@ -336,21 +336,27 @@ EXPORT Types := MODULE
     * Chi2_Result
     *
     * Result layout for Analysis.FeatureSelection.Chi2
-    * Contains chi2 value for every combination of feature and classifier per work item.
+    * Contains chi2 value for every combination of feature and classifier per work item,
+    * and its corresponding p value.
     *
     * @field wi Work item identifier
     * @field fnumber Feature number
     * @field snumber Sample number / number of classifier
-    * @field chi2 The chi2 value for this combination
-    * @field dof The number of degrees of freedom for this combination
+    * @field dof The number of degrees of freedom
+    * @field x2 The chi2 value for this combination. Higher values indicate more closely
+                  related variables
+    * @field p The p-value, which is the area under the chi-square probability density function
+    *          curve to the right of the specified x2 value. The probability that the variables
+    *          are not closely related
     *
     */
   EXPORT Chi2_Result := RECORD
     t_Work_Item wi;
     t_FieldNumber fnumber;
     t_FieldNumber snumber;
-    t_FieldReal x2;
     INTEGER dof;
+    t_FieldReal x2;
+    t_FieldReal p;
   END;
   /**
     * ARI_Result
@@ -468,4 +474,3 @@ EXPORT Types := MODULE
     t_FieldReal prob;
   END;
 END;
-
