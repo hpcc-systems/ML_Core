@@ -3,6 +3,7 @@
 ############################################################################## */
 IMPORT $ AS ML_Core;
 IMPORT ML_Core.Types;
+IMPORT ML_Core.Math;
 
 DiscreteField := Types.DiscreteField;
 NumericField := Types.NumericField;
@@ -412,7 +413,16 @@ EXPORT Analysis := MODULE
       chi2_2 := TABLE(chi2_1, {wi,fnumber,snumber,x2:=SUM(GROUP,value)},wi,fnumber,snumber);
       // Combine with calculated dof
       result := JOIN(chi2_2, dof3, 
-                     LEFT.wi=RIGHT.wi and LEFT.fnumber=RIGHT.fnumber and LEFT.snumber=RIGHT.snumber);
+                     LEFT.wi=RIGHT.wi and 
+                     LEFT.fnumber=RIGHT.fnumber and 
+                     LEFT.snumber=RIGHT.snumber,
+                     TRANSFORM(Chi2_Result,
+                               SELF.wi := LEFT.wi,
+                               SELF.fnumber := LEFT.fnumber,
+                               SELF.snumber := LEFT.snumber,
+                               SELF.dof := RIGHT.dof,
+                               SELF.x2 := LEFT.x2,
+                               SELF.p := 1 - Math.Distributions.Chi2_CDF(LEFT.x2, RIGHT.dof)));
       RETURN result;
     END; //Chi2
   END; // FeatureSelection
