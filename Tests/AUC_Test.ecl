@@ -109,7 +109,7 @@ DATASET(ML_Core.Types.AUC_Result) sklearn_AUC(DATASET(comb4_L) ds) := EMBED(Pyth
         for y in x.r:
           temp.append(y)
         probs.append(temp)
-      values = label_binarize(values,classes=range(0,len(workItem.d)+1))
+      values = label_binarize(values,classes=range(0,len(set(values))))
       aucs = roc_auc_score(values,probs,average=None)
       i = 0
       for r in aucs:
