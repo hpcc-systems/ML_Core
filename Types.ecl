@@ -218,7 +218,7 @@ EXPORT Types := MODULE
     *           raw accuracy of 97.5%, its PoDE would be .5 (i.e. half way between
     *           trivial solution and perfection).
     * @field Hamming_Loss Hamming loss. The percentage of records misclassified.
-    *           Useful for multilabel classification.
+    *           Useful for multilabel classification. It is equal to 1 - Raw_Accuracy.
     *
     */
   EXPORT Classification_Accuracy := RECORD
@@ -256,7 +256,7 @@ EXPORT Types := MODULE
     *                  predict as this class?
     * @field f_score The balanced F-score for this class
     *                  (i.e. 2 * (precision * recall) / (precision + recall))
-    *                  The harmonic mean of precision and recall.
+    *                  The harmonic mean of precision and recall. Higher values are better.
     *
     */
   EXPORT Class_Accuracy := RECORD
@@ -271,7 +271,11 @@ EXPORT Types := MODULE
   /**
     * AUC_Result
     *
-    * Result layout for Analysis.Classification.AUC
+    * Result layout for Analysis.Classification.AUC.
+    *
+    * Provides the area under the Receiver Operating Characteristic curve for the given
+    * given data. This area is a measure of the classifier's ability to distinguish between
+    * classes.
     *
     * @field wi Work item identifier
     * @field classifier The field number associated with this dependent variable, for
