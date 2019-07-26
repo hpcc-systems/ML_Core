@@ -302,6 +302,10 @@ EXPORT Analysis := MODULE
       RETURN result;
     END; // Accuracy
   END; // Regression
+  /**
+    * This sub module provides functions for assessing the features of a
+    * dataset, to perform feature selection.
+    */
   EXPORT FeatureSelection := MODULE
     /**
       * Contingency
@@ -426,7 +430,11 @@ EXPORT Analysis := MODULE
       RETURN result;
     END; //Chi2
   END; // FeatureSelection
-	EXPORT Clustering := MODULE
+  /**
+    * This sub module provides various tests that help evaluate the effectiveness of clustering
+    * algorithms.
+    */
+  EXPORT Clustering := MODULE
     /**
       * ARI
       *
@@ -531,7 +539,8 @@ EXPORT Analysis := MODULE
       * @see ML_Core.Types.SampleSilhouette_Result
       *
       */
-    EXPORT DATASET(SampleSilhouette_Result) SampleSilhouetteScore(DATASET(NumericField) samples, DATASET(ClusterLabels) labels) := FUNCTION
+    EXPORT DATASET(SampleSilhouette_Result) SampleSilhouetteScore(DATASET(NumericField) samples,
+								  DATASET(ClusterLabels) labels) := FUNCTION
       // Combine labels and samples
       points := JOIN(samples, labels,LEFT.wi = RIGHT.wi and LEFT.id = RIGHT.id);
       // Finding a values
