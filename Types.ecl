@@ -367,7 +367,7 @@ EXPORT Types := MODULE
     *
     * Result layout for Analysis.Clustering.ARI
     *
-    * Contains the Adusted Rand Index for each work item.
+    * Contains the Adjusted Rand Index for each work item.
     *
     * @field wi Work item identifier
     * @field value The ARI for the model
