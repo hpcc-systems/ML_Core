@@ -8,12 +8,13 @@ IMPORT ML_Core.Analysis AS Analysis;
 IMPORT ML_Core.Types AS Types;
 
 Chi2_Result := ML_Core.Types.Chi2_Result;
+
 // Generate Test data
 
-num_wis := 2;
-num_samples := 200;
-num_variables := 3;
-num_classes := 4;
+num_wis := 2;         // Number of work items
+num_samples := 200;   // Number of samples per work item
+num_variables := 3;   // Number of independent classifiers / features (as the case may be)
+num_classes := 4;     // Number of classes into which the classifier classifies data
 
 Types.DiscreteField RandomSample(INTEGER x) := TRANSFORM
   SELF.wi := (x-1) DIV (num_samples * num_variables) + 1;
@@ -25,7 +26,11 @@ END;
 pred := DATASET(num_wis * num_samples * num_variables, RandomSample(COUNTER));
 actual := DATASET(num_wis * num_samples * num_variables, RandomSample(COUNTER));
 
+// Find ML_Core chi2 value
+
 ML_Chi2 := ML_Core.Analysis.FeatureSelection.Chi2(pred,actual);
+
+// Prepare data to feed into python
 
 combNum := RECORD
   Types.NumericField.wi;
@@ -61,6 +66,8 @@ r2 := ROLLUP(GROUP(r1,wi), GROUP,
                        SELF.wi := LEFT.wi,
                        SELF.d := ROWS(LEFT)));
 
+// Compare with sklearn
+
 DATASET(ML_Core.Types.Chi2_Result) sklearn_Chi2_value(DATASET(combWi) a) := EMBED(Python)
   from scipy.stats import chi2_contingency as chi2
   from sklearn.metrics.cluster import contingency_matrix as cm
@@ -80,5 +87,7 @@ DATASET(ML_Core.Types.Chi2_Result) sklearn_Chi2_value(DATASET(combWi) a) := EMBE
 ENDEMBED;
 
 sk_Chi2 := sklearn_Chi2_value(r2);
+
+// Output comparison
 
 OUTPUT(DATASET([{ML_Chi2, sk_Chi2}], {DATASET(Chi2_Result) a, DATASET(Chi2_Result) b}))
