@@ -15,7 +15,7 @@ DiscreteField := ML_Core.Types.DiscreteField;
 num_wis := 2;          // Number of work items generated
 num_samples := 200;    // Number of samples per work item
 num_variables := 3;    // Number of independent classifiers
-num_classes := 4;      // Number of classes into which each classifier can be classified
+num_classes := 4;      // Number of classes into which each classifier classifies data
 
 Types.DiscreteField RandomSample(INTEGER x) := TRANSFORM
   SELF.wi := (x-1) DIV (num_samples * num_variables) + 1;
