@@ -25,7 +25,7 @@ ARI_Result := Types.ARI_Result; // Return structure for Clustering.ARI
 SampleSilhouette_Result := Types.SampleSilhouette_Result; // Return structure for Clustering.SampleSilhouetteScore
 Silhouette_Result := Types.Silhouette_Result; // Return structure for Clustering.SilhouetteScore
 AUC_Result := Types.AUC_Result; // Return structure for Classification.AUC
-Classification_Scores := Types.Classification_Scores;
+Classification_Scores := Types.Classification_Scores; // Parameter structure for Classification.AUC
 
 /**
   * Analyze and assess the effectiveness of a Machine
@@ -207,7 +207,7 @@ EXPORT Analysis := MODULE
       * The value of this metric ranges from 0 to 1. Higher values are an indication of better
       * classifiers.
       *
-      * @param scores The probablity or confidence per class that a sample belongs to that class in
+      * @param scores The probability or confidence per class that a sample belongs to that class in
       *               DATASET(Classification_Scores) format
       * @param actual The actual class to which a sample belongs in DATASET(DiscreteField) format
       * @return DATASET(AUC_Result) The AUC score, per class, per classifier, per work item
@@ -310,8 +310,8 @@ EXPORT Analysis := MODULE
     /**
       * Contingency
       *
-      * Provides the contingency table for each combination of feature and classifier. The
-      * contingency table represents the number of samples present in the data for each
+      * Provides the contingency table for each combination of feature and sample (classifier). 
+      * The contingency table represents the number of samples present in the data for each
       * combination of sample category and feature category. Can only be used when both
       * classifier and feature are discrete.
       *
@@ -321,7 +321,7 @@ EXPORT Analysis := MODULE
       * @param samples The samples or dependent values in DATASET(DiscreteField) format
       * @param features The features or independent values in DATASET(DiscreteField) format
       * @return DATASET(Contingency_Table) The contingency table for each combination of
-      *         classifier (sample) and feature, per work item
+      *         sample (classifier) and feature, per work item
       * @see ML_Core.Types.Contingency_Table
       *
       */
@@ -441,7 +441,7 @@ EXPORT Analysis := MODULE
       * The Rand index is a measure of the similarity between 
       * two data clusterings. Adjusted Rand Index (ARI) is a
       * version of rand index which is corrected for chance.
-      * Assumes values between -1 and 1. Gives near zero values
+      * This measure assumes values between -1 and 1. It produces values close to zero
       * for random clusterings, values close to 1 for good clusterings
       * and values close to -1 for clusterings that are worse than random guesses.
       *
@@ -532,6 +532,8 @@ EXPORT Analysis := MODULE
       * k during k-means clustering. Silhouette values lie in the range of (-1, 1). A value of +1
       * indicates that the sample point is far away from its neighboring cluster and very
       * close to the cluster to which it is assigned.
+      * 
+      * The euclidian distance metric is used to measure the distances between points.
       *
       * @param samples The datapoints / independent data in DATASET(NumericField) format
       * @param labels The labels assigned to these datapoints in DATASET(ClusterLabels) format
@@ -552,8 +554,8 @@ EXPORT Analysis := MODULE
              LEFT.number=RIGHT.number and
              LEFT.id <> RIGHT.id and
              LEFT.label=RIGHT.label,
-             TRANSFORM({INTEGER wi, INTEGER id1, INTEGER id2,
-                        INTEGER number, INTEGER label, REAL8 sq_diff},
+             TRANSFORM({t_Work_Item wi, t_RecordId id1, t_RecordId id2,
+                        t_RecordId number, t_RecordId label, t_FieldReal sq_diff},
                        SELF.wi := LEFT.wi,
                        SELF.id1 := LEFT.id,
                        SELF.id2 := RIGHT.id,
@@ -562,7 +564,7 @@ EXPORT Analysis := MODULE
                        SELF.sq_diff := POWER(LEFT.value-RIGHT.value,2)));
       // Find distance between these points
       a2 := TABLE(a1, {wi,id1,id2,label,dist:=SQRT(SUM(GROUP,sq_diff))},wi,id1,id2,label);
-      // Find average to find average distance for each point
+      // Find average distance for each point
       a3 := TABLE(a2, {wi, id:=id1, label,value:=AVE(GROUP,dist)}, wi,id1,label);
       // Finding b values
       // Form all pairs of points from different clusters
@@ -626,6 +628,8 @@ EXPORT Analysis := MODULE
       * k during k-means clustering. Silhouette values lie in the range of (-1, 1). A value of +1
       * indicates that the sample point is far away from its neighboring cluster and very
       * close to the cluster to which it is assigned.
+      * 
+      * The euclidian distance metric is used to measure the distances between points.
       *
       * This function produces an average over SampleSilhouetteScore
       *
