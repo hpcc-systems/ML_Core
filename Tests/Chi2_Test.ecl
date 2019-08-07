@@ -2,9 +2,7 @@
 ## HPCC SYSTEMS software Copyright (C) 2018 HPCC Systems®.  All rights reserved.
 ############################################################################## */
 
-IMPORT ML_Core;
 IMPORT Python;
-
 IMPORT $.^ AS ML_Core;
 IMPORT ML_Core.Analysis AS Analysis;
 IMPORT ML_Core.Types AS Types;
