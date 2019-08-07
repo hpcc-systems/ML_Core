@@ -6,7 +6,6 @@ IMPORT Python;
 IMPORT $.^ AS ML_Core;
 IMPORT ML_Core.Analysis AS Analysis;
 IMPORT ML_Core.Types AS Types;
-IMPORT Python;
 
 Chi2_Result := ML_Core.Types.Chi2_Result;
 // Generate Test data
