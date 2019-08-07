@@ -10,10 +10,10 @@ IMPORT Python;
 Labels := ML_Core.Types.ClusterLabels;
 NumericField := ML_Core.Types.NumericField;
 
-num_wis := 10;
-num_samples := 200;
-num_dimensions := 3;
-num_labels := 4;
+num_wis := 10;          // Number of work-items the generated data will have
+num_samples := 200;     // Number of samples per work item
+num_dimensions := 3;    // Number of dimensions of the points in space
+num_labels := 4;        // Number of cluster labels produced
 
 Labels GenerateLabel(UNSIGNED x) := TRANSFORM
   SELF.wi := (x-1) DIV (num_samples) + 1;
@@ -31,7 +31,7 @@ END;
 samples := DATASET(num_wis * num_samples * num_dimensions, GenerateSample(COUNTER));
 PredLabels := DATASET(num_wis * num_samples, GenerateLabel(COUNTER));
 
-//Find ARI
+//Find Silhouette Score
 
 ML_Sil_Score := ML_Core.Analysis.Clustering.SilhouetteScore(samples, PredLabels);
 
