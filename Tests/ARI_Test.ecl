@@ -8,9 +8,9 @@ IMPORT Python;
 
 Labels := ML_Core.Types.ClusterLabels;
 
-num_wis := 10;
-num_samples := 200;
-num_labels := 4;
+num_wis := 10;         // Number of work-items
+num_samples := 200;    // Number of samples per work item
+num_labels := 4;       // Number of clusters (unique labels)
 
 Labels GenerateSample(UNSIGNED x) := TRANSFORM
   SELF.wi := (x-1) DIV (num_samples) + 1;
