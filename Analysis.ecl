@@ -229,22 +229,24 @@ EXPORT Analysis := MODULE
                                  SELF.id := LEFT.id,
                                  SELF.classifier := LEFT.number,
                                  SELF.class := RIGHT.value,
-                                 SELF.prob := IF(EXISTS(scores(wi=SELF.wi and
-                                                               id=SELF.id and
-                                                               classifier=SELF.classifier and
-                                                               class=SELF.class)),
-                                                 scores(wi=SELF.wi and
-                                                        id=SELF.id and
-                                                        classifier=SELF.classifier and
-                                                        class=SELF.class)[1].prob,
-                                                 0),
+                                 SELF.prob := 0,
                                  SELF.isTrue := IF(LEFT.value=RIGHT.value, TRUE, FALSE)));
+      // Combining with scores to populate the probability field. LEFT OUTER is used in the JOIN condition to
+      // ensure that all classes are included.
+      combined2 := JOIN(combined, scores,
+                        LEFT.wi = RIGHT.wi and
+                        LEFT.classifier = RIGHT.classifier and
+                        LEFT.id = RIGHT.id and
+                        LEFT.class = RIGHT.class,
+                        TRANSFORM({RECORDOF(combined)},
+                                  SELF.prob := RIGHT.prob,
+                                  SELF := LEFT), LEFT OUTER);
       // Dataset of all pairs of positive and negative points per, class, per classifier, per work item.
       // Only positive samples are taken from the left set and negative samples are taken from the right.
       // If the score of the left sample is greater than the right sample, it is considered correct
       // and hence marked 1. If the left score is smaller than that of the right, it is considered
       // incorrect and marked 0. It they are equal, it is marked 0.5.
-      pairs := JOIN(combined, combined,
+      pairs := JOIN(combined2, combined2,
                     LEFT.wi=RIGHT.wi and
                     LEFT.classifier=RIGHT.classifier and
                     LEFT.class=RIGHT.class and
