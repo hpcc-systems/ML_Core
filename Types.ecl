@@ -217,6 +217,8 @@ EXPORT Types := MODULE
     *           solution would be right 95% of the time.  If this classification had a
     *           raw accuracy of 97.5%, its PoDE would be .5 (i.e. half way between
     *           trivial solution and perfection).
+    * @field Hamming_Loss Hamming loss. The percentage of records misclassified.
+    *           Useful for multilabel classification. It is equal to 1 - Raw_Accuracy.
     *
     */
   EXPORT Classification_Accuracy := RECORD
@@ -227,6 +229,7 @@ EXPORT Types := MODULE
     REAL Raw_Accuracy;
     REAL PoD;
     REAL PoDE;
+    REAL Hamming_Loss;
   END;
   /**
     * Class_Accuracy
@@ -251,6 +254,9 @@ EXPORT Types := MODULE
     *                  (i.e. False Positives / (False Positives + True Negatives))
     *                  What percentage of the items not in this class did we falsely
     *                  predict as this class?
+    * @field f_score The balanced F-score for this class
+    *                  (i.e. 2 * (precision * recall) / (precision + recall))
+    *                  The harmonic mean of precision and recall. Higher values are better.
     *
     */
   EXPORT Class_Accuracy := RECORD
@@ -260,6 +266,30 @@ EXPORT Types := MODULE
     REAL precision;
     REAL recall;
     REAL FPR;
+    REAL f_score;
+  END;
+  /**
+    * AUC_Result
+    *
+    * Result layout for Analysis.Classification.AUC.
+    *
+    * Provides the area under the Receiver Operating Characteristic curve for the given
+    * given data. This area is a measure of the classifier's ability to distinguish between
+    * classes.
+    *
+    * @field wi Work item identifier
+    * @field classifier The field number associated with this dependent variable, for
+    *                   multi-variate.  Otherwise 1.
+    * @field class The class to which the analytics apply.
+    * @field AUC The value of the Area Under the Receiver Operating Characteristic curve
+    *            for this class. This value ranges between 0 and 1. A higher value is an
+    *            indication of a better classifier.
+    */
+  EXPORT AUC_Result := RECORD
+    t_Work_Item wi;
+    t_FieldNumber classifier;
+    t_Discrete class;
+    t_FieldReal AUC;
   END;
   /**
     * Regression_Accuracy
@@ -283,8 +313,121 @@ EXPORT Types := MODULE
     t_FieldReal MSE;
     t_FieldReal RMSE;
   END;
+  /**
+    * Contingency_Table
+    *
+    * Contains the contingency table for every combination of feature and classifier.
+    * Result layout for Analysis.FeatureSelection.Contingency
+    * 
+    * @field wi Work item identifier
+    * @field fnumber The feature number
+    * @field snumber The sample number or the classifier number
+    * @field fclass The feature label / class
+    * @field sclass The sample (classifier) label / class
+    * @field cnt The number of samples with feature label fclass and classifier label sclass
+    *            Does not contain entries for combinations with no members.
+    *
+    */
+  EXPORT Contingency_Table := RECORD
+    t_Work_Item wi;
+    t_FieldNumber fnumber;
+    t_FieldNumber snumber;
+    t_Discrete fclass;
+    t_Discrete sclass;
+    INTEGER cnt := COUNT(GROUP);
+  END;
+  /**
+    * Chi2_Result
+    *
+    * Result layout for Analysis.FeatureSelection.Chi2
+    * Contains chi2 value for every combination of feature and classifier per work item,
+    * and its corresponding p value.
+    *
+    * @field wi Work item identifier
+    * @field fnumber Feature number
+    * @field snumber Sample number / number of classifier
+    * @field dof The number of degrees of freedom
+    * @field x2 The chi2 value for this combination. Higher values indicate more closely
+                  related variables
+    * @field p The p-value, which is the area under the chi-square probability density function
+    *          curve to the right of the specified x2 value. The probability that the variables
+    *          are not closely related
+    *
+    */
+  EXPORT Chi2_Result := RECORD
+    t_Work_Item wi;
+    t_FieldNumber fnumber;
+    t_FieldNumber snumber;
+    INTEGER dof;
+    t_FieldReal x2;
+    t_FieldReal p;
+  END;
+  /**
+    * ARI_Result
+    *
+    * Result layout for Analysis.Clustering.ARI
+    *
+    * Contains the Adjusted Rand Index for each work item.
+    *
+    * @field wi Work item identifier
+    * @field value The ARI for the model
+    *
+    */
+  EXPORT ARI_Result := RECORD
+    t_Work_Item wi;
+    t_FieldReal value;
+  END;
+  /**
+    * SampleSilhouette_Result
+    *
+    * Result layout for Analysis.Clustering.SampleSilhouetteScore
+    * 
+    * Contains the silhouette score for each sample datapoint.
+    *
+    * @field wi Work item identifier
+    * @field id Sample datapoint identifier
+    * @field value Silhouette score
+    *
+    */
+  EXPORT SampleSilhouette_Result := RECORD
+    t_Work_Item wi;
+    t_RecordID id;
+    t_FieldReal value;
+  END;
+  /**
+    * Silhouette_Result
+    *
+    * Result layout for Analysis.Clustering.SilhouetteScore
+    * 
+    * Contains the silhouette score for each work item.
+    *
+    * @field wi Work item identifier
+    * @field score Silhouette score
+    *
+    */
+  EXPORT Silhouette_Result := RECORD
+    t_Work_Item wi;
+    t_FieldReal score;
+  END;
   // End Analytic result structures
-
+  
+  // Clustering structures required by cluster analysis methods (See Analysis.ecl)
+  /**
+    * ClusterLabels format defines the distance space where
+    * each cluster defined by a center and its closest samples.
+    * It is the same as KMeans.Types.KMeans_Model.Labels.
+    *
+    * @field  wi      The model identifier.
+    * @field  id      The sample identifier.
+    * @field  label   The identifier of the closest center to the sample.
+    */
+  EXPORT ClusterLabels := RECORD
+    t_Work_Item wi;      // Model Identifier
+    t_RecordID  id;      // Sample Identifier
+    t_RecordID  label;   // Center Identifier
+  END;
+  // End Clustering structures
+  
   // Data diagnostic definition
   EXPORT Data_Diagnostic := RECORD
     t_work_item wi;
@@ -312,5 +455,26 @@ EXPORT Types := MODULE
     */
   EXPORT LUCI_Rec := RECORD
     STRING line;
+  END;
+  /**
+    * Classification_Scores
+    *
+    * The probability or confidence, per class, that a sample belongs to that class.
+    *
+    * @field wi The work-item identifier.
+    * @field id The record-id of the sample.
+    * @field classifier The field number associated with this dependent variable, for
+    *                   multi-variate. Otherwise 1.
+    * @field class The class label.
+    * @field prob The percentage of trees that assigned this class label,
+    *             which is a rough stand-in for the probability that the label
+    *             is correct.
+    */
+  EXPORT Classification_Scores := RECORD
+    t_Work_Item wi;
+    t_RecordID id;
+    t_FieldNumber classifier;
+    t_Discrete class;
+    t_FieldReal prob;
   END;
 END;
