@@ -3,123 +3,88 @@
 ############################################################################## */
 
 /**
- * Allows to convert both ordinal and nominal features into numbers
- * by assigning them values in the range [0 .. #OfCategories - 1]. 
+ * Allows to convert categorical features' values into numbers
+ * in the range [0 - n] where n is the number of categories for a feature.
  *
  * @see OneHotEncoder                                     
  */
 EXPORT LabelEncoder := MODULE
   /**
-   * Extracts, from the base data, 
-   * unique values for each feature in the feature list. 
+   * Builds a mapping between feature names and categories.
+   * 
+   * @param dataForUndefinedCategories: any record-oriented dataset.
+   *   <p>The data from which the categories are extracted 
+   *   if not predefined in the list of categorical features.
    *
-   * @param baseData
-   *   The data from which the unique values are extracted.
+   * @param partialKey: same record structure as the key (see below).                
+   *   <p> Mapping between feature names and categories. 
+   *   Some names are mapped to empty categories such that 
+   *   their categories could be extracted from dataForUndefinedCategories.
    *
-   * @param featureList                  
-   *   The list of features and their respective categories. 
-   *   If for a feature, the category set is empty, the categories will be extracted from baseData.
-   *             
-   * @return key
-   *   the categories for each feature in featureList
+   * @return key: DATASET(KeyLayout)
+   *   <p>The full mapping between categorical feature names and their categories.
+   *   Its record structure has the following format:
+   *   <p>
+   *   <pre>
+   *   KeyLayout := RECORD
+   *     SET OF STRING <name of categorical feature 1>;
+   *     SET OF STRING <name of categorical feature 2>;
+   *     ...
+   *     SET OF STRING <name of categorical feature n>;
+   *   END;
+   *   </pre>
    */
-  EXPORT GetKey(baseData, featureList) := FUNCTIONMACRO
-    IMPORT Preprocessing.LabelEncoder;
-    IMPORT Preprocessing.Utils.Types;
-    
-    FeatureListRec := RECORDOF(featureList);
-    #EXPORTXML(featureListFields, FeatureListRec)
+  EXPORT GetKey(dataForUndefinedCategories, partialKey) := FUNCTIONMACRO
+    IMPORT Preprocessing.Utils as U;
 
-    #DECLARE(KeyLayout)
-    #SET(keyLayout, 'RECORD\n')
-    #FOR(featureListFields)
-      #FOR(field)
-        #IF(%'@label'% IN LabelEncoder.GetFeatureNames(baseData))
-          #APPEND(keyLayout, %'@type'% + ' ' + %'@label'% + ';\n'); 
-        #ELSE
-          #WARNING(%'@label'% + ' is not a valid feature name!');   
-        #END
-      #END
-    #END
-    #APPEND(keyLayout, 'END;')
-    EncoderKeyRec := #EXPAND(%'keyLayout'%);
-    
-    #EXPORTXML(encoderKeyFields, EncoderKeyRec)
-    EncoderKeyRec buildEncoderKey(FeatureListRec L) := TRANSFORM
-      #FOR(encoderKeyFields)
-        #FOR(field)
-          #EXPAND('SELF.' + %'@label'% + ' := IF(COUNT(L.' + %'@label'% + ') = 0,' 
-                                                 + 'LabelEncoder.GetUniqueValues(' + #TEXT(baseData) + ', ' + %'@label'% + '), ' 
-                                                 + 'L.'+ %'@label'% + ')');
+    KeyLayout := RECORDOF(partialKey);
+    #EXPORTXML(KeyMetaInfo, partialKey)
+    dta := #TEXT(dataForUndefinedCategories);
+
+    KeyLayout completeKey(KeyLayout L) := TRANSFORM
+      #FOR(KeyMetaInfo)
+        #FOR(field)     
+          #EXPAND('SELF.' + %'@label'% + ' := IF(EXISTS(L.' + %'@label'% + '), '
+                                            + 'L.' + %'@label'% + ','
+                                            + 'U.GetCategories(' + dta + ',' + %'@label'% + '))');
           
         #END
       #END
     END;
 
-    encoderKey := PROJECT(featureList, buildEncoderKey(LEFT));
-    RETURN encoderKey;
+    Result := PROJECT(partialKey, completeKey(LEFT));
+    RETURN Result;
   ENDMACRO;
 
   /**
-   * Map values to each feature's categories in encoder key
-   *
-   * @param the encoder key       
-   *  the categories by feature
-   *
-   * @return the mapping
-   */
-  EXPORT GetMapping(encoderKey) := FUNCTIONMACRO
-    IMPORT Preprocessing.LabelEncoder;
-    IMPORT Preprocessing.PTypes;
-  
-    mappingRec := PTypes.LabelEncoder.mappingRec;   
-    
-    featureNames := LabelEncoder.GetFeatureNames(encoderKey);
-    result0 := DATASET([], mappingRec);
+    * Replaces each categorical value in the data with its index in the key.
+    * Every unknown category (not in the key) is replaced by -1.
+    *
+    * @param dataToEncode: any dataset.
+    *   <p> The data to encode.
+    *
+    * @param key: DATASET(KeyLayout).
+    *   <p> Mapping between feature names and their categories.
+    *
+    * @return encodedData: same record structure as dataToEncode 
+    *   with the datatype of all categorical features changed to INTEGER.
+    *   <p> Data with categorical values replaced by numbers.
+    */
+  EXPORT Encode(dataToEncode, key) := FUNCTIONMACRO
+    IMPORT Preprocessing.Utils;
 
-    #DECLARE(idx)
-    #SET(idx, 1)
-    #DECLARE (setOfCategories)
-    #SET (setOfCategories, '')
-    #LOOP
-      #IF (%idx% > COUNT(featureNames))
-        #BREAK
-      #ELSE
-        #SET (setOfCategories, #TEXT(encoderKey) + '[1].' + featureNames[%idx%]);
-        #EXPAND('result' + %'idx'% + ' := result' + (%idx%-1) + 
-                ' +  LabelEncoder.GetMappingForOneFeature(\'' + featureNames[%idx%] + '\',' + %'setOfCategories'% + ')');
-      #SET (idx, %idx% + 1)
-      #END
-    #END
-    
-    resultId := 'result' + (%idx% - 1);
-    Result := #EXPAND(resultId);
-    RETURN Result;
-  ENDMACRO;  
-  
-  /**
-   * For each feature in the encoder key, this function converts the values into unique numbers
-   *
-   * @param dataToEncode          
-   * 
-   * @param encoderKey
-   *
-   * @return the encoded data
-   */
-  EXPORT Encode(dataToEncode, encoderKey) := FUNCTIONMACRO
-    IMPORT Preprocessing.LabelEncoder;
-
-    featureNameSET := LabelEncoder.GetFeatureNames(encoderKey);
+    //build mapping between categories and values
     #UNIQUENAME(mapping)
-    %mapping% := LabelEncoder.GetMapping(encoderKey);
-    
-    isCategorical(STRING fname) := fname IN featureNameSET;
+    %mapping% := Utils.LabelEncoder.MapCategoriesToValues(key);
 
-    #EXPORTXML(dataFields, RECORDOF(dataToEncode))
-    EncodedDataRec := RECORD
-      #FOR(dataFields)
+    //build final record structure
+    featureNameSET := Utils.GetFeatureNames(key);
+
+    #EXPORTXML(dataMetaInfo, RECORDOF(dataToEncode))
+    EncodedDataLayout := RECORD
+      #FOR(dataMetaInfo)
         #FOR(field)
-          #IF(isCategorical(%'@label'%))
+          #IF(%'@label'% IN featureNameSET)
             #EXPAND('INTEGER ' + %'@label'%);
           #ELSE
             #EXPAND(%'@type'% + ' ' + %'@label'%);
@@ -127,48 +92,55 @@ EXPORT LabelEncoder := MODULE
         #END
       #END
     END;
-
-    #EXPORTXML(encoderKeyFields, RECORDOF(encoderKey))
-    #UNIQUENAME(currentCategory)
-    EncodedDataRec encodeValues (RECORDOF(dataToEncode) currentRow):= TRANSFORM      
-      #FOR(encoderKeyFields)
+    
+    //replace categories by corresponding value
+    #EXPORTXML(keyMetaInfo, RECORDOF(key))
+    #UNIQUENAME(categories)
+    #UNIQUENAME(category)
+    EncodedDataLayout replace (RECORDOF(dataToEncode) L):= TRANSFORM      
+      #FOR(keyMetaInfo)
         #FOR(field)
-          SELF.%@label% := IF(COUNT(%mapping%(featureName = %'@label'%)[1].categories(categoryName = (STRING)currentRow.%@label%)) = 0,
-                              -1,
-                              %mapping%(featureName = %'@label'%)[1].categories(categoryName = (STRING)currentRow.%@label%)[1].value);        
+          #SET(categories, %'mapping'% + '(featureName = \'' + %'@label'% + '\')[1].categories')
+          #SET(category, %'categories'% + '(categoryName = (STRING)L.' + %'@label'% + ')')
+          SELF.%@label% := IF(EXISTS(%category%), %category%[1].value, -1);
         #END
       #END
-      SELF := currentRow;
+      SELF := L;
     END;
-
-    result := PROJECT(dataToEncode, encodeValues(LEFT));
+    
+    result := PROJECT(dataToEncode, replace(LEFT));
     RETURN result;
   ENDMACRO;
-
+  
   /**
-   * For each feature in the encoder key, 
-   * this function converts back the encoded values into their original values
-   *
-   * @param dataToDecode
-   * 
-   * @param encoderKey
-   *
-   * @return the decoded data
-   */
+    * Converts back the categorical values into their original labels.
+    * Every -1 is replaced by an empty string.
+    *
+    * @param dataToDecode: any dataset.
+    *   <p> The data to decode.
+    *
+    * @param key: DATASET(KeyLayout).
+    *   <p> Mapping between feature names and their categories.
+    *
+    * @return decodedData: same record structure as dataToDecode 
+    *   with the datatype of all categorical features changed to STRING.
+    *   <p> Data with categorical values replaced by their original labels.
+    */
   EXPORT Decode(dataToDecode, encoderKey) := FUNCTIONMACRO
-    IMPORT Preprocessing.LabelEncoder;
+    IMPORT Preprocessing.Utils;
 
-    featureNameSET := LabelEncoder.GetFeatureNames(encoderKey);
+    //build mapping between categories and values
     #UNIQUENAME(mapping)
-    %mapping% := LabelEncoder.GetMapping(encoderKey);
+    %mapping% := Utils.LabelEncoder.MapCategoriesToValues(key);
     
-    isCategorical(STRING fname) := fname IN featureNameSET;
+    //build final record structure
+    featureNameSET := Utils.GetFeatureNames(key);
 
-    #EXPORTXML(dataFields, RECORDOF(dataToDecode))
-    DecodedDataRec := RECORD
-      #FOR(dataFields)
+    #EXPORTXML(dataMetaInfo, RECORDOF(dataToDecode))
+    DecodedDataLayout := RECORD
+      #FOR(dataMetaInfo)
         #FOR(field)
-          #IF(isCategorical(%'@label'%))
+          #IF(%'@label'% IN featureNameSET)
             #EXPAND('STRING ' + %'@label'%);
           #ELSE
             #EXPAND(%'@type'% + ' ' + %'@label'%);
@@ -176,94 +148,23 @@ EXPORT LabelEncoder := MODULE
         #END
       #END
     END;
-
-    DecodedDataRec encodeValues (RECORDOF(dataToDecode) currentRow):= TRANSFORM      
-      #FOR(encoderKeyFields)
+    
+    //replace values by original labels
+    #EXPORTXML(keyMetaInfo, RECORDOF(key))
+    #UNIQUENAME(categories)
+    #UNIQUENAME(category)
+    DecodedDataLayout replace (RECORDOF(dataToDecode) L):= TRANSFORM      
+      #FOR(keyMetaInfo)
         #FOR(field)
-          SELF.%@label% := %mapping%(featureName = %'@label'%)[1].categories(value = currentRow.%@label%)[1].categoryName;          
+          #SET(categories, %'mapping'% + '(featureName = \'' + %'@label'% + '\')[1].categories')
+          #SET(category, %'categories'% + '(value = L.' + %'@label'% + ')')
+          SELF.%@label% := %category%[1].categoryName;         
         #END
       #END
-      SELF := currentRow;
+      SELF := L;
     END;
 
-    result := PROJECT(dataToDecode, encodeValues(LEFT));
+    result := PROJECT(dataToDecode, replace(LEFT));
     RETURN result;
   ENDMACRO;
-  
-  /**
-   * Get unique values of a feature from a dataset
-   * 
-   * @param ds
-   *   the dataset from which to get the unique values
-   *
-   * @param featureName
-   *
-   * @return the feature's unique values
-   */
-  EXPORT GetUniqueValues(ds, featureName) := FUNCTIONMACRO
-    IMPORT Preprocessing.LabelEncoder;
-    IMPORT Preprocessing.Utils.Types;
-    
-    values := (SET OF STRING) SET(ds, featureName);
-    valueDS := DATASET(values, Types.StringRec);
-    categories := DEDUP(SORT(valueDS, val));
-    result := SET(categories, val);
-    RETURN result;
-  ENDMACRO;
-  
-  /**
-   * Get the feature names from the encoder key
-   * 
-   * @param encoderKey
-   *   the encoder key
-   *
-   * @return the feature names
-   */
-  EXPORT GetFeatureNames(encoderKey) := FUNCTIONMACRO
-    #EXPORTXML(encoderKeyFields, RECORDOF(encoderKey))
-    #DECLARE(featureNames)
-    #SET(featureNames, '[')
-    #FOR(encoderKeyFields)
-      #FOR(field)
-        #APPEND(featureNames, '\'' + %'{@label}'% + '\',')        
-      #END
-    #END
-
-    list := %'featureNames'%;
-    list2 := list[1..LENGTH(list)-1] + ']';
-    result := #EXPAND(list2);
-    RETURN result;
-  ENDMACRO;
-  
-  /** 
-   * assigns unique values to each category of a feature
-   *
-   * @param featureName
-   *   the name of the feature
-   *
-   * @param setOfCategories
-   *   the feature's categories
-   *
-   * @return the categories and their assigned values
-   */
-  EXPORT GetMappingForOneFeature(STRING featureName, SET OF STRING setOfCategories) := FUNCTION
-    IMPORT Preprocessing.PTypes;
-    
-    categoryRec := PTypes.LabelEncoder.CategoryRec;
-    mappingRec := PTypes.LabelEncoder.mappingRec;
-
-    StringRec := RECORD
-      STRING val;
-    END;
-
-    CategoryRec XF (StringRec L, UNSIGNED cnt) := TRANSFORM
-      SELF.categoryName := L.val;
-      SELF.value := cnt - 1;
-    END;
-    
-    CategoriesDS := DATASET(setOfCategories, StringRec);
-    categoriesValue := PROJECT(CategoriesDS, XF(LEFT, COUNTER));
-    Result := DATASET([{featureName, categoriesValue}], mappingRec);
-    RETURN Result;
-  END;
 END;
