@@ -2,9 +2,10 @@
 ## HPCC SYSTEMS software Copyright (C) 2020 HPCC Systems.  All rights reserved.
 ############################################################################## */
 
-IMPORT Preprocessing.Utils.DatasetComparator as Comparator;
 IMPORT Preprocessing;
-IMPORT Preprocessing.Types as PTypes;
+
+PTypes := Preprocessing.Types;
+Comparator := Preprocessing.Utils.DatasetComparator;
 
 /**
   * Test GetKey

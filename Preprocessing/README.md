@@ -5,8 +5,3 @@ Machine Learning Preprocessing Bundle for HPCC Systems
 - OneHotEncoder
 - MinMaxScaler
 - StandardScaler
-- MLNormalize
-- Split
-- RandomSplit
-- StratifiedSplit
-- StratifiedRandomSplit
