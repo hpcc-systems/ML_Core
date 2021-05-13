@@ -2,16 +2,16 @@
 ## HPCC SYSTEMS software Copyright (C) 2020 HPCC Systems.  All rights reserved.
 ############################################################################## */
 
-IMPORT $.^ as ML_Core;
+IMPORT $.^ as MLC;
 
-Types := ML_Core.Preprocessing.Types;
+Types := MLC.Preprocessing.Types;
 KeyLayout := Types.MinMaxScaler.KeyLayout;
 FeatureMinMax := Types.MinMaxScaler.FeatureMinMax;
-NumericField := ML_Core.types.NumericField;
-t_FieldReal := ML_Core.types.t_FieldReal;
+NumericField := MLC.types.NumericField;
+t_FieldReal := MLC.types.t_FieldReal;
 
 /**
- * shift the values in a range [min, max].
+ * shifts the values in a range [min, max].
  *
  * @param baseData: DATASET(NumericField), Default = DATASET([], NumericField).           
  *   <p> The data from which the minimums and maximums are determined.
@@ -24,6 +24,8 @@ t_FieldReal := ML_Core.types.t_FieldReal;
  *
  * @param key: DATASET(KeyLayout), default = DATASET([], KeyRec).            
  *   <p> The key to be reused for scaling/unscaling.
+ *
+ * @see StandardScaler
  */
 EXPORT MinMaxScaler (DATASET(NumericField) baseData = DATASET([], NumericField),
                      t_FieldReal lowBound = 0.0, t_FieldReal highBound = 1.0, 
@@ -36,15 +38,10 @@ EXPORT MinMaxScaler (DATASET(NumericField) baseData = DATASET([], NumericField),
    */
   SHARED ComputeKey() := FUNCTION    
     //compute the mins and max for each feature
-    FeatureMinMax GetMinAndMax(Types.numberLayout L) := TRANSFORM
-      SELF.featureId := L.number;
-      values := SET(baseData(number = L.number), value);
-      SELF.minValue := MIN(values);
-      SELF.maxValue := MAX(values);
-    END;
-    
-    featureIds := DATASET(SET(baseData(id = 1), number), Types.numberLayout);
-    minsAndMaxs := PROJECT(featureIds, GetMinAndMax(LEFT));
+    minsAndMaxs :=  TABLE(baseData,
+                         {featureID := number, minValue := MIN(GROUP, value),
+                         maxValue := MAX(GROUP, value)},
+                         wi, number, MERGE);
 
     //add lowBound and highBound to key
     Result := DATASET([{lowBound, highBound, minsAndMaxs}], KeyLayout);
@@ -72,7 +69,7 @@ EXPORT MinMaxScaler (DATASET(NumericField) baseData = DATASET([], NumericField),
   
   
   /**
-    * scale the data using the following formula:
+    * scales the data using the following formula:
     * x' = min + ([(x - x_min)(max - min)]/(x_max - x_min))
     *
     * @param dataToScale: DATASET(NumericField)  .         
@@ -83,13 +80,14 @@ EXPORT MinMaxScaler (DATASET(NumericField) baseData = DATASET([], NumericField),
   EXPORT Scale (DATASET(NumericField) dataToScale) := FUNCTION
     IMPORT STD;
 
-    low := innerKey[1].lowBound;
-    high := innerKey[1].highBound;
+    // low := innerKey[1].lowBound;
+    // high := innerKey[1].highBound;
 
     NumericField XF(NumericField L) := TRANSFORM
       minValue := innerKey.minsMaxs(featureId = L.number)[1].minValue;
       maxValue := innerKey.minsMaxs(featureId = L.number)[1].maxValue;
-      SELF.value := low + (((L.value - minValue) * (high - low))/(maxValue - minValue));
+      // SELF.value := low + (((L.value - minValue) * (high - low))/(maxValue - minValue));
+      SELF.value := lowBound + (((L.value - minValue) * (highBound - lowBound))/(maxValue - minValue));
       SELF := L;
     END;
 
@@ -98,7 +96,7 @@ EXPORT MinMaxScaler (DATASET(NumericField) baseData = DATASET([], NumericField),
   END; 
 
   /**
-   * unscale the data using the following formula
+   * unscales the data using the following formula
    * x = x_min + ((x' - min)(x_max - x_min))/(max-min)
    *
    * @param dataToUnscale: DATASET(NumericField)         
