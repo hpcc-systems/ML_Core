@@ -3,8 +3,10 @@
 ############################################################################## */
 
 /**
- * Convert categorical values into discrete numbers
- * in the range [0 ..（n - 1)] where n is the number of categories of a feature.                                  
+ * Allows to convert categorical features' values into numbers
+ * in the range [0 - n] where n is the number of categories for a feature.
+ *
+ * @see OneHotEncoder
  */
 EXPORT LabelEncoder := MODULE
   /**
@@ -18,7 +20,6 @@ EXPORT LabelEncoder := MODULE
    *   <p> Mapping between feature names and categories. 
    *   Some names are mapped to empty categories such that 
    *   their categories could be extracted from dataForUndefinedCategories.
-   *   Names which are mapped to non-empty categories will be assigned the same categories.
    *
    * @return key: DATASET(KeyLayout)
    *   <p>The full mapping between categorical feature names and their categories.
@@ -34,9 +35,7 @@ EXPORT LabelEncoder := MODULE
    *   </pre>
    */
   EXPORT GetKey(dataForUndefinedCategories, partialKey) := FUNCTIONMACRO
-    IMPORT ML_Core;
-    
-    Utl := ML_Core.Preprocessing.Utils;
+    IMPORT Preprocessing.Utils as U;
 
     KeyLayout := RECORDOF(partialKey);
     #EXPORTXML(KeyMetaInfo, partialKey)
@@ -47,7 +46,7 @@ EXPORT LabelEncoder := MODULE
         #FOR(field)     
           #EXPAND('SELF.' + %'@label'% + ' := IF(EXISTS(L.' + %'@label'% + '), '
                                             + 'L.' + %'@label'% + ','
-                                            + 'Utl.GetCategories(' + dta + ',' + %'@label'% + '))');
+                                            + 'U.GetCategories(' + dta + ',' + %'@label'% + '))');
           
         #END
       #END
@@ -57,6 +56,7 @@ EXPORT LabelEncoder := MODULE
     RETURN Result;
   ENDMACRO;
 
+// <<<<<<< HEAD
 /**
   * Builds a lookup table that maps each category of a feature to a unique number.
   * Each category is assigned its index in the category set.
@@ -83,11 +83,13 @@ EXPORT LabelEncoder := MODULE
   *   </pre>
   */
   EXPORT GetMapping(key) := FUNCTIONMACRO
-    IMPORT ML_Core;
+    IMPORT Preprocessing.Utils.LabelEncoder;
 
-    RETURN ML_Core.LabelEncoder.MapCategoriesToValues(key);
+    RETURN LabelEncoder.MapCategoriesToValues(key);
   ENDMACRO;
 
+// =======
+// >>>>>>> e119eb11b4b077b1c2a25099f826d07112ea1d23
   /**
     * Replaces each categorical value in the data with its index in the key.
     * Every unknown category (not in the key) is replaced by -1.
@@ -103,9 +105,7 @@ EXPORT LabelEncoder := MODULE
     *   <p> Data with categorical values replaced by numbers.
     */
   EXPORT Encode(dataToEncode, key) := FUNCTIONMACRO
-    IMPORT ML_Core;
-
-    utils := ML_Core.Preprocessing.Utils;
+    IMPORT Preprocessing.Utils;
 
     //build mapping between categories and values
     #UNIQUENAME(mapping)
@@ -161,9 +161,7 @@ EXPORT LabelEncoder := MODULE
     *   <p> Data with categorical values replaced by their original labels.
     */
   EXPORT Decode(dataToDecode, encoderKey) := FUNCTIONMACRO
-    IMPORT ML_Core;
-
-    utils := ML_Core.Preprocessing.Utils;
+    IMPORT Preprocessing.Utils;
 
     //build mapping between categories and values
     #UNIQUENAME(mapping)

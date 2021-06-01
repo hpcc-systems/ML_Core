@@ -28,10 +28,8 @@
   *   </pre>
   */
 EXPORT MapCategoriesToValues(key) := FUNCTIONMACRO
-  IMPORT ML_Core;
-
-  Utils := ML_Core.Preprocessing.Utils;
-  Enc := ML_Core.Preprocessing.Utils.LabelEncoder;
+  IMPORT Preprocessing.Utils;
+  IMPORT Preprocessing.Utils.LabelEncoder as E;
 
   //looping through each feature and getting the mapping of its categories.
   featureNames := Utils.GetFeatureNames(key);
@@ -48,7 +46,7 @@ EXPORT MapCategoriesToValues(key) := FUNCTIONMACRO
       #SET (unmappedCategories, #TEXT(key) + '.' + featureNames[%cnt%]);
       #SET(fName, '\'' + featureNames[%cnt%] + '\'');
       #EXPAND('result' + %'cnt'% + ' := result' + (%cnt%-1) + 
-              ' + Enc.MapAFeatureCategories(' + %'fName'% + ',' + %'unmappedCategories'% + ')');
+              ' + E.MapAFeatureCategories(' + %'fName'% + ',' + %'unmappedCategories'% + ')');
     #SET (cnt, %cnt% + 1)
     #END
   #END
