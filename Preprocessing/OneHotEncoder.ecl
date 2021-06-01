@@ -52,21 +52,23 @@ EXPORT OneHotEncoder(DATASET(NumericField) baseData = DATASET([], NumericField),
   EXPORT GetNumberAndCategories() := FUNCTION
     IMPORT STD;
 
-    featureIdDS := DATASET(featureIds, numberLayout);
-
-    KeyLayout extract(numberLayout L) := TRANSFORM
-      SELF.number := L.number;
-
-      valueSET := SET(baseData(number = L.number), value);
-      valueDS := SORT(DATASET(valueSET, valueLayout), value);
-      isCategorical := EXISTS(featureIdDS(number = L.number));
-      SELF.categories := IF(isCategorical, DEDUP(valueDS), DATASET([], valueLayout));
-      SELF.startNumWhenEncoded := 0;
-    END;
-
-    featureNumbers := DATASET(SET(baseData(id = 1), number), numberLayout);
-    Result := PROJECT(featureNumbers, extract(LEFT));
-    RETURN Result; 
+    categoricalDS := baseData(number IN featureIDs);
+    categorical0 := TABLE(categoricalDS, {number, value}, number, value);
+    init := GROUP(SORT(categorical0, number), number);
+    categorical := ROLLUP(init,
+                         GROUP,
+                         TRANSFORM(KeyLayout,
+                         SELF.number := LEFT.number,
+                         SELF.startNumWhenEncoded := 0,
+                         SELF.categories := DATASET(SET(ROWS(LEFT), value),
+                         valueLayout)));
+    nonCategorical := TABLE(baseData(number NOT IN featureIDs),
+                           {number,
+                           UNSIGNED4 startNumWhenEncoded := 0,
+                           Categories := DATASET([], valueLayout)},
+                           number);
+    result := categorical + nonCategorical;
+    RETURN SORT(Result, number);
   END;
 
   /**
