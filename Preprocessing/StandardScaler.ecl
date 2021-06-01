@@ -29,15 +29,7 @@ EXPORT StandardScaler(DATASET(NumericField) baseData = DATASET([], NumericField)
     * @return avgandStdevByFeature: DATASET(KeyLayout).
     */
   SHARED ComputeKey() := FUNCTION    
-    KeyLayout compute(numberLayout L) := TRANSFORM
-      SELF.featureId := L.number;
-      values := SET(baseData(number = L.number), value);
-      SELF.avg := AVE(values);
-      SELF.stdev := SQRT(VARIANCE(DATASET(values, valueLayout), value));
-    END;
-
-    featureIds := DATASET(SET(baseData(id = 1), number), numberLayout);
-    Result := PROJECT(featureIds, compute(LEFT));
+    result := TABLE(baseData, {featureID := number, avg := AVE(GROUP, value), stdev := SQRT(VARIANCE(GROUP, value))}, number);
     RETURN Result;
   END;
 
