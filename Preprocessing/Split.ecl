@@ -9,7 +9,7 @@ Types := Preprocessing.Types;
 NumericField := ML_Core.Types.NumericField;
 
 /**
- * Split data into training and test data.
+ * Split data into training and test data. It requires the data has sequential id starting with 1.
  *
  * @param dataToSplit: DATASET(Types.NumericField).
  *   <p> The data to split.
@@ -28,40 +28,33 @@ NumericField := ML_Core.Types.NumericField;
 EXPORT Split(DATASET(NumericField) dataToSplit, 
              REAL4 trainSize = 0.0, 
              REAL4 testSize = 0.0, 
-             BOOLEAN shuffle = FALSE) := FUNCTION  
-  
-  ids := DEDUP(DATASET(SET(dataToSplit, id), Types.idLayout));
-  
-  //Get the count of training and test sets
-  dataCount := COUNT(ids);
-  trainCount := ROUND(IF(trainSize = 0.0, dataCount * (1-testSize), dataCount * trainSize));
-  testCount := ROUND(IF(testSize = 0.0, dataCount * (1-trainSize), dataCount * testSize));
-  
-  //get ids of training and test sets
-  traininingIds := SET(ids, id)[1..trainCount];
-  testIds := SET(ids, id)[(trainCount + 1) .. (trainCount + testCount)];
-  
-  //extract training and test data
-  ds := IF(shuffle = TRUE, Preprocessing.Utils.Shuffle(dataToSplit), dataToSplit);
-  trainData := ds(id IN traininingIds);
-  testData := ds(id IN testIds);
-  
-  //fix ids ordering so it starts from 1
-  finalTrainData := Preprocessing.Utils.ResetID(trainData);
-  finalTestData := Preprocessing.Utils.ResetID(testData);
+             BOOLEAN shuffle = FALSE) := MODULE
 
-  ResultLayout := RECORD
-    DATASET(NumericField) trainData;
-    DATASET(NumericField) testData;
-  END;
-
-  splitResult := DATASET([{finalTrainData, finalTestData}], ResultLayout);
-
-  //validate input before splitting
-  validationMsg := $.Utils.ValidateSplitInput(dataToSplit, trainSize, testSize);
-  Result := IF(validationMsg = 'valid', 
-               splitResult, 
-               ERROR(ResultLayout, validationMsg));
   
-  RETURN Result[1];
+//Get the count of training and test sets
+SHARED  idCount := MAX(dataToSplit, id);
+SHARED  fieldCount := MAX(dataToSplit, number);
+SHARED  errorMsg := 'Incorrect Train Size';
+SHARED  trainCount := IF(trainSize >= 0.0 AND trainSize <= 1,ROUND(idCount * trainSize) * fieldCount, ERROR(errorMsg));
+SHARED  testCount := COUNT(dataToSplit) - trainCount;
+
+// Random Split the data without Shuffle
+SHARED  nonShuffle_trainDS := dataTosplit(id <= ROUND(idCount * trainSize));
+SHARED  nonShuffle_testDS := dataToSplit(id > ROUND(idCount * trainSize));
+
+// Random Split the data with Shuffle
+SHARED ids := PROJECT(TABLE(dataToSplit, {id}, id),
+                          TRANSFORM(
+                            {UNSIGNED4 id, UNSIGNED4 newID, UNSIGNED4 shuffleID},
+                            SELF.newID := 0,
+                            SELF.shuffleID := RANDOM(),
+                            SELF.id := LEFT.id));
+SHARED  addNewID := PROJECT(SORT(ids, shuffleID, LOCAL), TRANSFORM(RECORDOF(LEFT), SELF.newID := COUNTER, SELF := LEFT));
+SHARED  newDS := JOIN(dataToSplit, addNewID, LEFT.id = RIGHT.id, TRANSFORM(RECORDOF(dataToSplit), SELF.id := RIGHT.newID, SELF := LEFT), LOOKUP);
+SHARED Shuffle_trainDS := newDS( id <= ROUND(idCount * trainSize));
+SHARED Shuffle_testDS :=  newDS(id > ROUND(idCount * trainSize));
+
+// Export the splited datasets
+EXPORT trainData := IF(shuffle = FALSE, nonShuffle_trainDS, Shuffle_trainDS);
+EXPORT testData := IF(shuffle = FALSE, nonShuffle_testDS, Shuffle_testDS);
 END;
