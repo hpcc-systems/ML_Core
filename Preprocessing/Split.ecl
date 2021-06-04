@@ -32,15 +32,15 @@ EXPORT Split(DATASET(NumericField) dataToSplit,
 
   
 //Get the count of training and test sets
-SHARED  idCount := MAX(dataToSplit, id);
-SHARED  fieldCount := MAX(dataToSplit, number);
-SHARED  errorMsg := 'Incorrect Train Size';
-SHARED  trainCount := IF(trainSize >= 0.0 AND trainSize <= 1,ROUND(idCount * trainSize) * fieldCount, ERROR(errorMsg));
-SHARED  testCount := COUNT(dataToSplit) - trainCount;
+SHARED idCount := MAX(dataToSplit, id);
+SHARED fieldCount := MAX(dataToSplit, number);
+SHARED errorMsg := 'Incorrect Train Size';
+SHARED trainCount := IF(trainSize >= 0.0 AND trainSize <= 1,ROUND(idCount * trainSize) * fieldCount, ERROR(errorMsg));
+SHARED testCount := COUNT(dataToSplit) - trainCount;
 
 // Random Split the data without Shuffle
-SHARED  nonShuffle_trainDS := dataTosplit(id <= ROUND(idCount * trainSize));
-SHARED  nonShuffle_testDS := dataToSplit(id > ROUND(idCount * trainSize));
+SHARED nonShuffle_trainDS := dataTosplit(id <= ROUND(idCount * trainSize));
+SHARED nonShuffle_testDS := dataToSplit(id > ROUND(idCount * trainSize));
 
 // Random Split the data with Shuffle
 SHARED ids := PROJECT(TABLE(dataToSplit, {id}, id),
@@ -49,8 +49,8 @@ SHARED ids := PROJECT(TABLE(dataToSplit, {id}, id),
                             SELF.newID := 0,
                             SELF.shuffleID := RANDOM(),
                             SELF.id := LEFT.id));
-SHARED  addNewID := PROJECT(SORT(ids, shuffleID, LOCAL), TRANSFORM(RECORDOF(LEFT), SELF.newID := COUNTER, SELF := LEFT));
-SHARED  newDS := JOIN(dataToSplit, addNewID, LEFT.id = RIGHT.id, TRANSFORM(RECORDOF(dataToSplit), SELF.id := RIGHT.newID, SELF := LEFT), LOOKUP);
+SHARED addNewID := PROJECT(SORT(ids, shuffleID, LOCAL), TRANSFORM(RECORDOF(LEFT), SELF.newID := COUNTER, SELF := LEFT));
+SHARED newDS := JOIN(dataToSplit, addNewID, LEFT.id = RIGHT.id, TRANSFORM(RECORDOF(dataToSplit), SELF.id := RIGHT.newID, SELF := LEFT), LOOKUP);
 SHARED Shuffle_trainDS := newDS( id <= ROUND(idCount * trainSize));
 SHARED Shuffle_testDS :=  newDS(id > ROUND(idCount * trainSize));
 

@@ -3,148 +3,10 @@
 ############################################################################## */
 
 IMPORT $.^ as ML_Core;
+IMPORT ML_Core.Types as MTypes;
 
-Types := ML_Core.Preprocessing.Types;
-Utils := ML_Core.Preprocessing.Utils;
 NumericField := ML_Core.Types.NumericField;
-valueLayout := Types.valueLayout;
 
-//layout for keeping count of label values in dataset
-YCountsLayout := RECORD
-  REAL value;
-  UNSIGNED cnt;
-END;
-
-/**
- * Determine, from full data, the count of each value of the field whose number id is yId.
- *
- * @param ds: DATASET(NumericField).
- *   <p> The dataset from which to extract the values' count.
- *
- * @param yId: UNSIGNED.
- *   <p> The id of the field.
- *
- * @return the values' count in full data: DATASET(YCountsLayout).
- */
-GetYCountsInDS(DATASET(NumericField) ds, UNSIGNED yId) := FUNCTION
-  yValueSET := SET(ds(number = yid), value);
-  yValues := DEDUP(SORT(DATASET(yValueSET, valueLayout), value));
-
-  YCountsLayout GetYCounts (valueLayout L) := TRANSFORM
-    SELF.value := L.value;
-    SELF.cnt := COUNT(ds(value = L.value AND number = yId));
-  END;
-
-  Result := PROJECT(yValues, GetYCounts(LEFT));
-  RETURN Result;
-END;
-
-/**
- * Determine, from train data, the count of each value of the field whose number id is yId.
- *
- * @param yCountsInDS: DATASET(YCountsLayout).
- *   <p> The y Counts from full data.
- *
- * @param trainSize: REAL4.
- *   <p> The training size.
- *
- * @return the values' count in train data: DATASET(YCountsLayout).
- */
-GetYCountsInTrainDS(DATASET(YCountsLayout) yCountsInDS, REAL4 trainSize) := FUNCTION
-  YCountsLayout GetYCounts(YCountsLayout L) := TRANSFORM
-    SELF.value := L.value;
-    SELF.cnt := ROUND(L.cnt * trainSize);
-  END;
-  
-  Result := PROJECT(yCountsInDS, GetYCounts(LEFT));
-  RETURN Result;
-END;
-
-/**
- * Determine, from test data, the count of each value of the field whose number id is yId.
- *
- * @param yCountsInDS: DATASET(YCountsLayout).
- *   <p> The y Counts from full data.
- *
- * @param testSize: REAL4.
- *   <p> The test size.
- *
- * @return the values' count in test data: DATASET(YCountsLayout).
- */
-GetYCountsInTestDS(DATASET(YCountsLayout) yCountsInDS, REAL4 testSize) := FUNCTION
-  YCountsLayout GetYCounts(YCountsLayout L) := TRANSFORM
-    SELF.value := L.value;
-    SELF.cnt := ROUND(L.cnt * testSize);
-  END;
-  
-  Result := PROJECT(yCountsInDS, GetYCounts(LEFT));
-  RETURN Result;
-END;
-
-/**
- * Extracts train and test data based on label field (yid) and 
- * label field values' count in train and test data.
- *
- * @param ds: DATASET(NumericField).
- *   <p> The dataset from which to extract train and test sets.
- *
- * @param yid: UNSIGNED.
- *   <p> the label id.
- *
- * @param yCountsInTrainDS: DATASET(YCountsLayout).
- *   <p> Label field values' count in train data.
- *
- * @param yCountsInTestDS: DATASET(YCountsLayout).
- *   <p> Label field values' count in test data.
- *
- * @return training and test data.
- */
-GetTrainAndTestData(DATASET(NumericField) ds, UNSIGNED yId, 
-                    DATASET(YCountsLayout) yCountsInTrainDS,
-                    DATASET(YCountsLayout) yCountsInTestDS) := FUNCTION
-
-  ResultLayout := RECORD
-    UNSIGNED cnt;
-    DATASET(NumericField) trainData;
-    DATASET(NumericField) testData;
-  END;
-  
-  emptyNF := DATASET([], NumericField);
-  initialLoopResult := DATASET([{1, emptyNF, emptyNF}], ResultLayout);
-  maxNumber := MAX(SET(ds, number));
-
-  Result := LOOP(initialLoopResult,
-                     COUNT(yCountsInTrainDS),
-                     PROJECT(ROWS(LEFT),
-                            TRANSFORM(ResultLayout,
-                              trainCount := yCountsInTrainDS[LEFT.cnt].cnt * maxNumber;
-                              testCount := yCountsInTestDS[LEFT.cnt].cnt * maxNumber;
-                              relevantIds := SET(ds(number = yid AND value = yCountsInTrainDS[LEFT.cnt].value), id);
-                              relevantRows := ds(id IN relevantIds);
-                              SELF.trainData := LEFT.trainData + relevantRows[1..trainCount];
-                              SELF.testData := LEFT.testData + relevantRows[(trainCount + 1)..(trainCount + testCount)];
-                              SELF.cnt := LEFT.cnt + 1)));
-  
-  RETURN Result;  
-END;
-
-/**
- * validate yId (must be between 1 and max field id).
- */
-validateYID(DATASET(NumericField) ds, UNSIGNED yid) := FUNCTION
-  maxNumber := MAX(SET(ds, number));
-  Result := IF(yid >= 1 AND yid <= maxNumber, 'valid', 'yId valid range = [1, ' + maxNumber + ']');
-  RETURN Result;
-END;
-
-/**
- * validate ds, trainSize, testSize and yId
- */
-validateInput(DATASET(NumericField) ds, REAL4 trainSize, REAL4 testSize, UNSIGNED yId) := FUNCTION  
-  splitValidationMsg := $.Utils.validateSplitInput(ds, trainSize, testSize);
-  Result := IF(splitValidationMsg = 'valid', validateYID(ds, yId), splitValidationMsg);
-  RETURN Result;
-END;
 
 /**
  * Allows to split data while maintaining the proportions of a feature.
@@ -165,35 +27,88 @@ END;
  */
 EXPORT StratifiedSplit(DATASET(NumericField) ds, 
                        REAL4 trainSize = 0, REAL4 testSize = 0, UNSIGNED labelId = 0, 
-                       BOOLEAN shuffle = FALSE) := FUNCTION
-
-  yId := IF(labelId = 0, MAX(SET(ds, number)), labelId);
-  finalTrainSize := IF(trainSize = 0, 1 - testSize, trainSize);
-  finalTestSize := IF(testSize = 0, 1 - trainSize, testSize);  
-  finalDS := IF(shuffle = TRUE, Utils.Shuffle(ds), ds);
-
-  yCountsInDS := GetYCountsInDS(finalDS, yId);
-  yCountsInTrainDS := GetYCountsInTrainDS(yCountsInDS, finalTrainSize);
-  yCountsInTestDS := GetYCountsInTestDS(yCountsInDS, finalTestSize);  
-  trainAndTestData := GetTrainAndTestData(finalDS, yId, yCountsInTrainDS, yCountsInTestDS);  
-
-  tempTrainData := SORT(trainAndTestData.trainData, id);
-  tempTestData := SORT(trainAndTestData.testData, id);
-
-  finalTrainData := Utils.ResetID(tempTrainData);
-  finalTestData := Utils.ResetID(tempTestData);
+                       BOOLEAN shuffle = FALSE) := MODULE
+  //Get the count of training and test sets
+  SHARED idCount := MAX(ds, id);
+  SHARED fieldCount := MAX(ds, number);
+  SHARED errorMsg := 'Incorrect input parameter(s)';
+  SHARED trainCount := IF(trainSize >= 0.0 AND trainSize <= 1,
+                                  ROUND(idCount * trainSize) * fieldCount,
+                                                             ERROR(errorMsg));
+  SHARED testCount := COUNT(ds) - trainCount;
+  //Calculate the number of training records for each category
+  SHARED ratio := TABLE(ds(number = labelID),
+                       {value, cnt := COUNT(group),
+                       ratio := COUNT(GROUP)/idCount,
+                       trainCnt := ROUND(trainSize*COUNT(GROUP))},
+                       value);
   
-  Resultlayout := RECORD
-    DATASET(NumericField) trainData;
-    DATASET(NumericField) testData;
+  SHARED l_IDs := RECORD
+    UNSIGNED4 id;
+    REAL value;
+    UNSIGNED4 newID;
   END;
+  // Aggregate the ids of each category
+  SHARED ids := PROJECT(TABLE(ds(number = labelID), {id, value}, id, value),
+                            TRANSFORM(
+                              l_IDs,
+                              SELF.newID := 0,
+                              SELF.id := LEFT.id,
+                              SELF.value := LEFT.value));
 
-  SplitResult := DATASET([{finalTrainData, finalTestData}], Resultlayout);
+  SHARED newIDs := PROJECT(GROUP(SORT(ids, value), value),
+                           TRANSFORM(l_IDs, SELF.newID := COUNTER,
+                           SELF := LEFT));
+  // Get the train and test set without shuffle
+  SHARED nonshuffle_idRst := JOIN(GROUP(newIDs), ratio,
+                                 LEFT.value = RIGHT.value,
+                                 TRANSFORM({RECORDOF(LEFT), BOOLEAN ifTrain},
+                                 SELF.ifTrain := IF(LEFT.newid <= RIGHT.trainCnt, TRUE, FALSE),
+                                 SELF := LEFT));
+  SHARED nonshuffle_dsRst :=JOIN(ds, nonshuffle_idRst,
+                                LEFT.id = RIGHT.id,
+                                TRANSFORM({NumericField, BOOLEAN ifTrain},
+                                SELF.ifTrain := RIGHT.ifTrain,
+                                SELF := LEFT));
+  SHARED nonShuffle_trainDS := PROJECT(nonshuffle_dsRst(ifTrain = TRUE),
+                                       TRANSFORM(MTypes.NumericField, SELF.id := COUNTER, SELF := LEFT));
+  SHARED nonShuffle_testDS := PROJECT(nonshuffle_dsRst(ifTrain = FALSE),
+                                       TRANSFORM(MTypes.NumericField, SELF.id := COUNTER, SELF := LEFT));
+  // Get the train and test set without shuffle
+  SHARED shuffle_idRst0 := JOIN(GROUP(newIDs), ratio,
+                               LEFT.value = RIGHT.value,
+                               TRANSFORM({RECORDOF(LEFT), BOOLEAN ifTrain, UNSIGNED4 shuffleID},
+                               SELF.ifTrain := IF(LEFT.newid <= RIGHT.trainCnt, TRUE, FALSE),
+                               SELF.shuffleID := RANDOM(),
+                               SELF := LEFT));
+  SHARED shuffle_idRst_train := PROJECT(SORT(shuffle_idRst0(ifTrain = TRUE), shuffleID),
+                                              TRANSFORM(RECORDOF(LEFT), SELF.newID := COUNTER, SELF := LEFT));
+  SHARED shuffle_idRst_test := PROJECT(SORT(shuffle_idRst0(ifTrain = FALSE), shuffleID),
+                                              TRANSFORM(RECORDOF(LEFT), SELF.newID := COUNTER, SELF := LEFT));
+  SHARED shuffle_idRst := shuffle_idRst_train + shuffle_idRst_test;
 
-  validationMsg := validateInput(ds, finalTrainSize, finalTestSize, yId);
-  Result := IF(validationMsg = 'valid', 
-               SplitResult, 
-               ERROR(Resultlayout, validationMsg));
+  SHARED shuffle_dsRst :=JOIN(ds, shuffle_idRst,
+                              LEFT.id = RIGHT.id,
+                              TRANSFORM({NumericField, BOOLEAN ifTrain},
+                              SELF.id := RIGHT.newID,
+                              SELF.ifTrain := RIGHT.ifTrain,
+                              SELF := LEFT));
 
-  RETURN Result[1];
+  SHARED Shuffle_trainDS := PROJECT(shuffle_dsRST(ifTrain = TRUE),
+                                      TRANSFORM(NumericField, SELF := LEFT));
+  SHARED Shuffle_testDS := PROJECT(shuffle_dsRST(ifTrain = FALSE),
+                                      TRANSFORM(NumericField, SELF := LEFT));
+  //Sanity check of the input parameters
+  SHARED sanityCheck := FUNCTION
+      labelCheck := IF(labelID >= 0 AND labelID <= fieldCount, TRUE, FALSE);
+      trainSizeCheck := IF(trainSize >= 0 AND trainSize <= 1, TRUE, FALSE);
+      testSizeCheck := IF(testSize >= 0 AND testSize <= 1, TRUE, FALSE);
+    RETURN IF(labelCheck AND trainSizeCheck AND testSizeCheck, TRUE, FALSE);
+  END;
+  // EXPORT trainData := IF(sanityCheck, IF(shuffle = FALSE, nonShuffle_trainDS, Shuffle_trainDS), ERROR(errorMsg));
+  // EXPORT testData := IF(sanityCheck, IF(shuffle = FALSE, nonShuffle_testDS, Shuffle_testDS),  ERROR(errorMsg));
+  //Export the results
+  EXPORT trainData := IF(shuffle = FALSE, nonShuffle_trainDS, Shuffle_trainDS);
+  EXPORT testData := IF(shuffle = FALSE, nonShuffle_testDS, Shuffle_testDS);
+
 END;
