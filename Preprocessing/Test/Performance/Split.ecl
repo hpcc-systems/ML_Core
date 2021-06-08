@@ -1,7 +1,5 @@
 IMPORT $.^.^ as Prep;
-IMPORT Prep.^ as MLC;
-IMPORT MLC.Types as MTypes;
-IMPORT STD;
+IMPORT $.^.^.^ as MLC;
 
 layout := RECORD
   UNSIGNED4 id;
@@ -39,7 +37,7 @@ END;
 
 testData := NORMALIZE(baseData, n, transNorm(LEFT, COUNTER) );
 MLC.ToField(testdata,  dataToSplit);
-split := Prep.Split1(dataToSplit, 0.5);
+split := Prep.Split(dataToSplit, 0.5);
 trainSet:= split.trainData;
 testSet:= split.testData;
 OUTPUT(trainSet);

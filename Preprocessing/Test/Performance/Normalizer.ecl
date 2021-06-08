@@ -1,8 +1,5 @@
 IMPORT $.^.^ as Prep;
-IMPORT Prep.^ as MLC;
-IMPORT MLC.Types as MTypes;
-IMPORT STD;
-// import Prep.NORMALIZE1;
+IMPORT $.^.^.^ as MLC;
 
 layout := RECORD
   UNSIGNED4 id;

@@ -56,7 +56,7 @@ EXPORT LabelEncoder := MODULE
     RETURN Result;
   ENDMACRO;
 
-// <<<<<<< HEAD
+
 /**
   * Builds a lookup table that maps each category of a feature to a unique number.
   * Each category is assigned its index in the category set.
@@ -88,8 +88,7 @@ EXPORT LabelEncoder := MODULE
     RETURN LabelEncoder.MapCategoriesToValues(key);
   ENDMACRO;
 
-// =======
-// >>>>>>> e119eb11b4b077b1c2a25099f826d07112ea1d23
+
   /**
     * Replaces each categorical value in the data with its index in the key.
     * Every unknown category (not in the key) is replaced by -1.

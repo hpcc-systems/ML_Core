@@ -80,8 +80,6 @@ EXPORT MinMaxScaler (DATASET(NumericField) baseData = DATASET([], NumericField),
   EXPORT Scale (DATASET(NumericField) dataToScale) := FUNCTION
     IMPORT STD;
 
-    // low := innerKey[1].lowBound;
-    // high := innerKey[1].highBound;
 
     NumericField XF(NumericField L) := TRANSFORM
       minValue := innerKey.minsMaxs(featureId = L.number)[1].minValue;

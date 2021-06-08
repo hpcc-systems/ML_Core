@@ -1,7 +1,4 @@
 IMPORT $.^.^ as Prep;
-IMPORT Prep.^ as MLC;
-IMPORT MLC.Types as MTypes;
-IMPORT STD;
 
 layout := RECORD
   UNSIGNED4 id;
@@ -26,16 +23,14 @@ Layout transNorm(Layout l, INTEGER c) := TRANSFORM
 END;
 
  KeyLayout := RECORD
-    SET OF STRING c1 := [] ;
-    // SET OF STRING c2 := [] ;
-    // SET OF STRING c3;
-    // SET OF STRING c4;
-    // SET OF STRING c5;
-    // SET OF STRING c6;
+    SET OF STRING c1 := [];
+    SET OF STRING c2 := [];
+    SET OF STRING c3 := [];
+    SET OF STRING c4 := [];
   END;
 
 testData := NORMALIZE(baseData, n, transNorm(LEFT, COUNTER) );
 keys := Prep.LabelEncoder.GetKey(testData, ROW({[]}, KeyLayout));
 keys;
-result := Prep.LabelEncoder.encode(testdata, keys );
+result := Prep.LabelEncoder.encode(testdata, keys);
 OUTPUT(result);

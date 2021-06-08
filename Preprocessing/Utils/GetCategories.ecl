@@ -15,9 +15,7 @@
   *   <p> the feature's categories.
   */
 EXPORT GetCategories(source, featureName) := FUNCTIONMACRO  
-  values := (SET OF STRING) SET(source, featureName);
-  valueDS := DATASET(values, {STRING val});
-  categories := DEDUP(SORT(valueDS, val));
-  Result := SET(categories, val);
+  categories := TABLE(source, {featureName}, featureName);
+  Result := SET(categories, featureName);
   RETURN Result;
 ENDMACRO;

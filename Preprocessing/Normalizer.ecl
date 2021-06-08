@@ -5,7 +5,6 @@
 IMPORT $.^ as ML_Core;
 IMPORT ML_Core.Types AS MTypes;
 
-
 /**
  * Normalize the data with below options:
  * L1 norm.

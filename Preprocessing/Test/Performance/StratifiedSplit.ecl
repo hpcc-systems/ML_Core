@@ -1,7 +1,5 @@
 IMPORT $.^.^ as Prep;
-IMPORT Prep.^ as MLC;
-IMPORT MLC.Types as MTypes;
-IMPORT STD;
+IMPORT $.^.^.^ as MLC;
 
 layout := RECORD
   UNSIGNED4 id;
@@ -19,7 +17,6 @@ layout := RECORD
   REAL x12;
 END;
 baseData := DATASET([{1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}], layout);
-// baseData := DATASET([{1, 1, 2}], layout);
 n := 10000000;
 
 Layout transNorm(Layout l, INTEGER c) := TRANSFORM

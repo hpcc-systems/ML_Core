@@ -1,19 +1,6 @@
 IMPORT $.^.^ as Prep;
-IMPORT Prep.^ as MLC;
-IMPORT MLC.Types as MTypes;
-IMPORT STD;
-t_fieldReal := REAL;
-t_FieldNumber := UNSIGNED4;
+IMPORT $.^.^.^ as MLC;
 
-valueLayout := RECORD
-    t_FieldReal value;
-  END;
-
-KeyLayout := RECORD
-      t_FieldNumber number;
-      t_FieldNumber startNumWhenEncoded;
-      DATASET(valueLayout) categories;
-    END;
 
 layout := RECORD
   UNSIGNED4 id;
