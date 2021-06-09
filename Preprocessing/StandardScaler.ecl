@@ -8,7 +8,8 @@ NumericField := ML_Core.Types.NumericField;
 KeyLayout := ML_Core.Preprocessing.Types.StandardScaler.KeyLayout;
 
 /**
-  * Allow to scale the values such that they have a zero mean and unit variance.
+  * Transform the input data to a standard normally distributed data with zero mean and
+  * unit variance.
   *
   * @param baseData: DATASET(NumericField), default = DATASET([], Types.NumericField)
   *   <p> The data from which the means and standard deviations are determined for each feature.
@@ -24,7 +25,7 @@ EXPORT StandardScaler(DATASET(NumericField) baseData = DATASET([], NumericField)
   SHARED numberLayout := Preprocessing.Types.numberLayout;
 
   /**
-    * Compute averages and standard deviation (stdevs) for each feature in baseData.
+    * Compute the mean and standard deviation (stdevs) for each feature in baseData.
     *
     * @return avgandStdevByFeature: DATASET(KeyLayout).
     */
@@ -42,7 +43,7 @@ EXPORT StandardScaler(DATASET(NumericField) baseData = DATASET([], NumericField)
                           ERROR(KeyLayout, 1, errorMsg)));
 
   /**
-    * Compute the average and standard deviation per feature or reuses the key if provided.
+    * Compute the mean and standard deviation per feature or reuses the key if provided.
     *
     * @return key: DATASET(KeyLayout).
     */
@@ -52,7 +53,7 @@ EXPORT StandardScaler(DATASET(NumericField) baseData = DATASET([], NumericField)
   
   /**
     * scale the data using the following formula
-    * x' = (x - avg)/stdev
+    * x' = (x - mean)/stdev
     *
     * @param dataToScale: DATASET(NumericField).
     *   <p> The data to scale
@@ -73,7 +74,7 @@ EXPORT StandardScaler(DATASET(NumericField) baseData = DATASET([], NumericField)
 
   /**
     * unscale the data using the following formula:
-    * x = (x' * stdev) + avg
+    * x = (x' * stdev) + mean
     *
     * @param dataToUnscale: DATASET(NumericField).         
     *   <p> The data to unscale.

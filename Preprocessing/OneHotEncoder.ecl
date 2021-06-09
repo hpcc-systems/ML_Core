@@ -3,8 +3,7 @@
 ############################################################################## */
 
 /**
-  * For categorical features within a dataset, 
-  * this module creates new binary and numeric features. The new binary features only takes a value of 0 or 1 indicating the true value of the category.
+  * Encode the categorical features as a binary numeric array.
   *
   * @param baseData: DATASET(NumericField), default = DATASET([], NumericField).
   *   <p> Data from which categories are extracted for encoding/decoding.

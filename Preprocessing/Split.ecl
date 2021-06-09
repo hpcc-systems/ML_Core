@@ -9,7 +9,7 @@ IMPORT Preprocessing.Types AS Types;
 NumericField := MLC.Types.NumericField;
 
 /**
- * Split data into training and test data. It requires the data has sequential id starting with 1.
+ * Split input data into training and test sets based on the split ratio. It requires the data has sequential id starting with 1.
  *
  * @param dataToSplit: DATASET(Types.NumericField).
  *   <p> The data to split.

@@ -11,7 +11,7 @@ NumericField := MLC.types.NumericField;
 t_FieldReal := MLC.types.t_FieldReal;
 
 /**
- * shifts the values in a range [min, max].
+ * Scale the input data to a defined range [Min, Max].
  *
  * @param baseData: DATASET(NumericField), Default = DATASET([], NumericField).           
  *   <p> The data from which the minimums and maximums are determined.

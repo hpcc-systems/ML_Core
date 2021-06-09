@@ -9,7 +9,9 @@ NumericField := ML_Core.Types.NumericField;
 
 
 /**
- * Allows to split data while maintaining the proportions of a feature.
+ * Split input data into training and test sets based on the split ratio.
+ * The result preservees the percentage of the samples for the specific feature or class.
+ * It requires the data has sequential id starting with 1.
  * 
  * @param ds: DATASET(NumericField).
  *   The data to split.
