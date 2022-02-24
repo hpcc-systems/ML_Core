@@ -273,8 +273,8 @@ EXPORT Analysis := MODULE
       *
       * <p>ML_Core.Types.Regression_Accuracy provides a detailed description of the return values. 
       *
-      * @param predicted The predicted values for each id in DATASET(DiscreteField) format.
-      * @param actual The actual (i.e. expected) values for each id in DATASET(DiscreteField) format.
+      * @param predicted The predicted values for each id in DATASET(NumericField) format.
+      * @param actual The actual (i.e. expected) values for each id in DATASET(NumericField) format.
       * @return DATASET(Regression_Accuracy).  One record for each combination of work-item, and
       *         number (i.e. regressor).
       * @see ML_Core.Types.Regression_Accuracy
@@ -598,7 +598,7 @@ EXPORT Analysis := MODULE
       b4 := TABLE(b3,
               {wi,id,label:=Llabel,value:=MIN(GROUP,avgDist)},
               wi,id,Llabel);
-      // The Silhouette coefficient / score for each sample datapoint
+      // The Silhouette coefficient/score for each sample datapoint
       sampleCoeffs := JOIN(a3,b4,
                        LEFT.id=RIGHT.id and LEFT.wi=RIGHT.wi,
                        TRANSFORM({t_Work_Item wi, t_RecordId id, t_RecordId label, t_FieldReal value},
@@ -635,7 +635,7 @@ EXPORT Analysis := MODULE
       *
       * This function produces an average over SampleSilhouetteScore
       *
-      * @param samples The datapoints / independent data in DATASET(NumericField) format
+      * @param samples The datapoints/independent data in DATASET(NumericField) format
       * @param labels The labels assigned to these datapoints in DATASET(ClusterLabels) format
       * @result DATASET(Silhouette_Result) The silhouette coefficient per work item
       * @see ML_Core.Types.SampleSilhouette_Result, ML_Core.Analysis.SampleSilhouetteScore
