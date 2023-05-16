@@ -16,7 +16,7 @@
   *   <p> A row the feature name mapped to its categories and each category
   *   mapped to its value.
   */
-IMPORT Preprocessing.Utils.LabelEncoder.Types;
+IMPORT $.Types;
 
 EXPORT MapAFeatureCategories(STRING featureName, SET OF STRING unmappedCategories) := FUNCTION
   Category := Types.Category;
