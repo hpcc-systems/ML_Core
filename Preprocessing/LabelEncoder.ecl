@@ -41,7 +41,7 @@ EXPORT LabelEncoder := MODULE
    *   </pre>
    */
   EXPORT GetKey(dataForUndefinedCategories, partialKey) := FUNCTIONMACRO
-    IMPORT Preprocessing.Utils as U;
+    IMPORT #$.Utils as U;
 
     KeyLayout := RECORDOF(partialKey);
     #EXPORTXML(KeyMetaInfo, partialKey)
@@ -89,7 +89,7 @@ EXPORT LabelEncoder := MODULE
   *   </pre>
   */
   EXPORT GetMapping(key) := FUNCTIONMACRO
-    IMPORT Preprocessing.Utils.LabelEncoder;
+    IMPORT #$.Utils.LabelEncoder;
     RETURN LabelEncoder.MapCategoriesToValues(key);
   ENDMACRO;
 
@@ -109,7 +109,7 @@ EXPORT LabelEncoder := MODULE
     *   <p> Data with categorical values replaced by numbers.
     */
   EXPORT Encode(dataToEncode, key) := FUNCTIONMACRO
-    IMPORT Preprocessing.Utils;
+    IMPORT #$.Utils;
 
     //build mapping between categories and values
     #UNIQUENAME(mapping)
@@ -165,7 +165,7 @@ EXPORT LabelEncoder := MODULE
     *   <p> Data with categorical values replaced by their original labels.
     */
   EXPORT Decode(dataToDecode, encoderKey) := FUNCTIONMACRO
-    IMPORT Preprocessing.Utils;
+    IMPORT #$.Utils;
 
     //build mapping between categories and values
     #UNIQUENAME(mapping)

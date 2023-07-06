@@ -70,8 +70,8 @@ EXPORT OneHotEncoder(DATASET(NumericField) ds = DATASET([], NumericField),
   EXPORT encode := newNonCatDS + newCatDS;
   /**
     * Revert the encoded data to its original form
-    * @ param encodedDS encoded data
-    * @ return decoded  decoded data
+    * @param encodedDS encoded data
+    * @return decoded  decoded data
     */
   EXPORT decode(DATASET(NumericField) encodedDS) := FUNCTION
           decodedCat := JOIN(encodedDS(value <> 0), cat_mappings,
